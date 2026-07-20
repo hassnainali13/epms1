@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/panel/:id", "destination": "/index.html" },
+    { "source": "/panels/:path*", "destination": "/index.html" },
+    { "source": "/instruments/:path*", "destination": "/index.html" },
+    { "source": "/instrument-master", "destination": "/index.html" },
+    { "source": "/admin-login", "destination": "/index.html" }
+  ]
+}

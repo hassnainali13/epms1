@@ -30,7 +30,7 @@ function AppRouter() {
 
   if (normalizedPath.startsWith("/panel/")) {
     const panelId = normalizedPath.replace("/panel/", "").replace(/\/$/, "");
-    return <PanelDetails panelId={panelId} />;
+    return <PanelQrPage panelId={panelId} />;
   }
 
   if (normalizedPath.startsWith("/panels/edit/")) {
