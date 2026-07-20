@@ -57,7 +57,11 @@ export default function PanelQRCode({
     const height = 304.8; // 12 inches in mm
     const margin = 6;
     const contentWidth = width - margin * 2;
-    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [width, height] });
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: [width, height],
+    });
 
     let y = margin;
     pdf.setFont("helvetica", "normal");
@@ -80,7 +84,9 @@ export default function PanelQRCode({
     y += qrSize + 6;
     pdf.setFontSize(6.8);
     pdf.setTextColor("#475569");
-    pdf.text("Scan to access panel details instantly", width / 2, y, { align: "center" });
+    pdf.text("Scan to access panel details instantly", width / 2, y, {
+      align: "center",
+    });
 
     y += 12;
     const sectionPadding = 4;
@@ -124,7 +130,12 @@ export default function PanelQRCode({
       if (index < basicRows.length - 1) {
         pdf.setDrawColor(226, 232, 240);
         pdf.setLineWidth(0.3);
-        pdf.line(margin + 1, y + sectionPadding + rowHeight * (index + 1) + 1, width - margin - 1, y + sectionPadding + rowHeight * (index + 1) + 1);
+        pdf.line(
+          margin + 1,
+          y + sectionPadding + rowHeight * (index + 1) + 1,
+          width - margin - 1,
+          y + sectionPadding + rowHeight * (index + 1) + 1,
+        );
       }
     });
 
@@ -134,17 +145,35 @@ export default function PanelQRCode({
       { label: "Current", value: panel?.technicalSpecs?.current || "—" },
       { label: "Frequency", value: panel?.technicalSpecs?.frequency || "—" },
       { label: "Phase", value: panel?.technicalSpecs?.phase || "—" },
-      { label: "Power Rating", value: panel?.technicalSpecs?.powerRating || "—" },
-      { label: "Power Factor", value: panel?.technicalSpecs?.powerFactor || "—" },
-      { label: "Control Voltage", value: panel?.technicalSpecs?.controlVoltage || "—" },
+      {
+        label: "Power Rating",
+        value: panel?.technicalSpecs?.powerRating || "—",
+      },
+      {
+        label: "Power Factor",
+        value: panel?.technicalSpecs?.powerFactor || "—",
+      },
+      {
+        label: "Control Voltage",
+        value: panel?.technicalSpecs?.controlVoltage || "—",
+      },
       { label: "IP Rating", value: panel?.technicalSpecs?.ipRating || "—" },
-      { label: "Enclosure Material", value: panel?.technicalSpecs?.enclosureMaterial || "—" },
+      {
+        label: "Enclosure Material",
+        value: panel?.technicalSpecs?.enclosureMaterial || "—",
+      },
       { label: "Panel Color", value: panel?.technicalSpecs?.panelColor || "—" },
       { label: "Dimensions", value: panel?.technicalSpecs?.dimensions || "—" },
       { label: "Weight", value: panel?.technicalSpecs?.weight || "—" },
-      { label: "Mounting Type", value: panel?.technicalSpecs?.mountingType || "—" },
+      {
+        label: "Mounting Type",
+        value: panel?.technicalSpecs?.mountingType || "—",
+      },
       { label: "Cable Size", value: panel?.technicalSpecs?.cableSize || "—" },
-      { label: "Control Cable Size", value: panel?.technicalSpecs?.controlCableSize || "—" },
+      {
+        label: "Control Cable Size",
+        value: panel?.technicalSpecs?.controlCableSize || "—",
+      },
     ];
 
     pdf.setFillColor(59, 130, 246);
@@ -168,14 +197,21 @@ export default function PanelQRCode({
       if (index < techRows.length - 1) {
         pdf.setDrawColor(226, 232, 240);
         pdf.setLineWidth(0.3);
-        pdf.line(margin + 1, y + sectionPadding + rowHeight * (index + 1) + 1, width - margin - 1, y + sectionPadding + rowHeight * (index + 1) + 1);
+        pdf.line(
+          margin + 1,
+          y + sectionPadding + rowHeight * (index + 1) + 1,
+          width - margin - 1,
+          y + sectionPadding + rowHeight * (index + 1) + 1,
+        );
       }
     });
 
     y += techHeight + 8;
     pdf.setFontSize(6.2);
     pdf.setTextColor("#94A3B8");
-    pdf.text("Reliable Power. Smart Control.", width / 2, height - 6, { align: "center" });
+    pdf.text("Reliable Power. Smart Control.", width / 2, height - 6, {
+      align: "center",
+    });
 
     return pdf;
   };

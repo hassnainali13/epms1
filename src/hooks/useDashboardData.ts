@@ -14,6 +14,7 @@ export function useDashboardData() {
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
     logoUrl: "",
+    installerAccessCode: "",
   });
   const [companySaving, setCompanySaving] = useState(false);
   const [companyNotice, setCompanyNotice] = useState<{
@@ -41,9 +42,14 @@ export function useDashboardData() {
         setCompanyProfile({
           name: company?.name || currentUser.name || "",
           logoUrl: company?.logoUrl || "",
+          installerAccessCode: company?.installerAccessCode || "",
         });
       } catch {
-        setCompanyProfile({ name: currentUser.name || "", logoUrl: "" });
+        setCompanyProfile({
+          name: currentUser.name || "",
+          logoUrl: "",
+          installerAccessCode: "",
+        });
       }
     };
 
@@ -59,10 +65,13 @@ export function useDashboardData() {
       const company = await saveCompanyProfile({
         name: companyProfile.name,
         logoUrl: companyProfile.logoUrl,
+        installerAccessCode: companyProfile.installerAccessCode,
       });
       setCompanyProfile({
         name: company?.name || companyProfile.name,
         logoUrl: company?.logoUrl || companyProfile.logoUrl,
+        installerAccessCode:
+          company?.installerAccessCode || companyProfile.installerAccessCode,
       });
       setCompanyNotice({ type: "success", text: "Company profile updated." });
     } catch (error) {

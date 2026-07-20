@@ -31,6 +31,7 @@ import {
 import { useApp } from "../context/AppContext";
 import PanelQRCode from "./PanelQRCode";
 import UpgradeModal from "./UpgradeModal";
+import InstallerCodeSettings from "./InstallerCodeSettings";
 import { SearchPanelModal } from "./dashboard/SearchPanelModal";
 import { StatusBadge } from "./dashboard/StatusBadge";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -88,6 +89,8 @@ export default function EPMSDashboard() {
     uploadLogo,
   } = useDashboardData();
   const [activeNav, setActiveNav] = useState("dashboard");
+  const canEditInstallerCode =
+    currentUser.role === "company_admin" || currentUser.role === "super_admin";
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
@@ -152,21 +155,23 @@ export default function EPMSDashboard() {
         {/* Nav */}
         <nav className="flex-1 py-4 overflow-y-auto">
           <div className="px-3 space-y-0.5">
-            {navItems.map(({ icon: Icon, label, id }) => {
-              const active = activeNav === id;
-              const isLocked = isFree && id === "reports";
-              return (
-                <button
-                  key={id}
-                  onClick={() => {
-                    if (isLocked) {
-                      triggerUpgrade(
-                        "Premium Reports are not available on the Free plan.",
-                      );
-                      return;
-                    }
-                    setActiveNav(id);
-                  }}
+            {navItems
+              .filter((item) => item.id !== "employees" || canEditInstallerCode)
+              .map(({ icon: Icon, label, id }) => {
+                const active = activeNav === id;
+                const isLocked = isFree && id === "reports";
+                return (
+                  <button
+                    key={id}
+                    onClick={() => {
+                      if (isLocked) {
+                        triggerUpgrade(
+                          "Premium Reports are not available on the Free plan.",
+                        );
+                        return;
+                      }
+                      setActiveNav(id);
+                    }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                     active
                       ? "bg-[#F0F9FF] text-[#0369A1]"
@@ -431,6 +436,34 @@ export default function EPMSDashboard() {
                   />
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeNav === "employees" && canEditInstallerCode && (
+            <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-[#0F172A]">
+                    Employees & Installer Access
+                  </h2>
+                  <p className="text-xs text-[#64748B] mt-1">
+                    Manage installer code access for the installation team.
+                  </p>
+                </div>
+              </div>
+
+              <InstallerCodeSettings
+                installerAccessCode={companyProfile.installerAccessCode}
+                onChange={(value) =>
+                  setCompanyProfile((prev) => ({
+                    ...prev,
+                    installerAccessCode: value,
+                  }))
+                }
+                onSubmit={saveCompanyProfile}
+                saving={companySaving}
+                notice={companyNotice}
+              />
             </div>
           )}
 

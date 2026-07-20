@@ -1046,7 +1046,10 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
       try {
         setLoading(true);
         setError(null);
-        const res = await api.get(`/panels/lookup/${panelId}`);
+        const endpoint = currentUser
+          ? `/panels/lookup/${panelId}`
+          : `/panels/public/${panelId}`;
+        const res = await api.get(endpoint);
         if (!mounted) return;
         const nextPanel = res.data.panel as PanelRecord;
         setPanel(nextPanel);
@@ -1065,7 +1068,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     return () => {
       mounted = false;
     };
-  }, [panelId]);
+  }, [panelId, currentUser]);
 
   const handleBack = () => {
     if (window.history.length > 1) {

@@ -30,6 +30,7 @@ export async function fetchCompanyProfile() {
 export async function saveCompanyProfile(payload: {
   name: string;
   logoUrl: string;
+  installerAccessCode?: string;
 }) {
   const res = await api.patch("/company", payload);
   return res.data.company;

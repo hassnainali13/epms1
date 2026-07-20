@@ -19,20 +19,49 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     installationLocation: "",
   });
 
+  const hasInstallationDetails = Boolean(
+    panel?.installer && panel?.installationDate && panel?.installationLocation,
+  );
+
+  const canCompleteInstallation = Boolean(
+    !hasInstallationDetails && panel?.status !== "Installed",
+  );
+
   useEffect(() => {
     const getPanel = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/panels/lookup/${panelId}`);
+        const res = await api.get(`/panels/public/${panelId}`);
         setPanel(res.data.panel);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load panel.");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load panel. Please try again later.",
+        );
       } finally {
         setLoading(false);
       }
     };
     getPanel();
   }, [panelId]);
+
+  useEffect(() => {
+    if (panel && !canCompleteInstallation) {
+      setMode("view");
+    }
+  }, [panel, canCompleteInstallation]);
+
+  useEffect(() => {
+    if (
+      panel &&
+      !canCompleteInstallation &&
+      window.location.pathname.startsWith("/panel/")
+    ) {
+      window.history.replaceState({}, "", `/panels/${panelId}`);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  }, [panel, canCompleteInstallation, panelId]);
 
   const handleInstallSubmit = async () => {
     if (!panel) return;
@@ -139,13 +168,15 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
                 </p>
               </div>
 
-              <button
-                onClick={() => setMode("install")}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-[#0EA5E9] text-white rounded-2xl hover:bg-[#0284C7] transition-colors"
-              >
-                <Lock size={16} />
-                Complete Installation
-              </button>
+              {canCompleteInstallation && (
+                <button
+                  onClick={() => setMode("install")}
+                  className="inline-flex items-center gap-2 px-5 py-3 bg-[#0EA5E9] text-white rounded-2xl hover:bg-[#0284C7] transition-colors"
+                >
+                  <Lock size={16} />
+                  Complete Installation
+                </button>
+              )}
             </>
           ) : (
             <div className="space-y-4">
