@@ -172,30 +172,30 @@ export default function EPMSDashboard() {
                       }
                       setActiveNav(id);
                     }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
-                    active
-                      ? "bg-[#F0F9FF] text-[#0369A1]"
-                      : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
-                  }`}
-                >
-                  <Icon
-                    size={18}
-                    className={`flex-shrink-0 ${active ? "text-[#0EA5E9]" : "text-[#94A3B8] group-hover:text-[#64748B]"}`}
-                  />
-                  {sidebarOpen && (
-                    <span className="whitespace-nowrap flex-1 text-left">
-                      {label}
-                    </span>
-                  )}
-                  {sidebarOpen && isLocked && (
-                    <Lock size={11} className="text-[#CBD5E1]" />
-                  )}
-                  {active && sidebarOpen && !isLocked && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0EA5E9]" />
-                  )}
-                </button>
-              );
-            })}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                      active
+                        ? "bg-[#F0F9FF] text-[#0369A1]"
+                        : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                    }`}
+                  >
+                    <Icon
+                      size={18}
+                      className={`flex-shrink-0 ${active ? "text-[#0EA5E9]" : "text-[#94A3B8] group-hover:text-[#64748B]"}`}
+                    />
+                    {sidebarOpen && (
+                      <span className="whitespace-nowrap flex-1 text-left">
+                        {label}
+                      </span>
+                    )}
+                    {sidebarOpen && isLocked && (
+                      <Lock size={11} className="text-[#CBD5E1]" />
+                    )}
+                    {active && sidebarOpen && !isLocked && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0EA5E9]" />
+                    )}
+                  </button>
+                );
+              })}
           </div>
         </nav>
 

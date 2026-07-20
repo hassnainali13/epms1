@@ -188,10 +188,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [subscriptionPrice, setSubscriptionPriceState] = useState(49);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("epms_token");
-    if (!token) return;
+    if (!token) {
+      setIsAuthReady(true);
+      return;
+    }
     api
       .get("/auth/me")
       .then(async (res) => {
@@ -230,9 +234,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setCurrentUser((prev) => (prev ? { ...prev, panels } : prev));
         }
       })
-      .catch(() => {
-        localStorage.removeItem("epms_token");
-        localStorage.removeItem("epms_refresh_token");
+      .catch((error: any) => {
+        if (error?.status === 401 || error?.status === 403) {
+          localStorage.removeItem("epms_token");
+          localStorage.removeItem("epms_refresh_token");
+        }
+      })
+      .finally(() => {
+        setIsAuthReady(true);
       });
   }, []);
 
@@ -240,6 +249,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
+      if (user.role === "super_admin") {
+        return {
+          ok: false,
+          error: "Administrator credentials are not allowed on this page.",
+        };
+      }
       localStorage.setItem("epms_token", token);
       const mappedUser: User = {
         id: user._id || user.id,
@@ -258,6 +273,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUsers([]);
       setIsAdmin(false);
       setView("dashboard");
+      if (typeof window !== "undefined") {
+        window.history.pushState({}, "", "/dashboard");
+      }
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getAuthErrorMessage(error) };
@@ -268,6 +286,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
+      if (user.role !== "super_admin") {
+        return {
+          ok: false,
+          error: "Only system administrators may log in here.",
+        };
+      }
       localStorage.setItem("epms_token", token);
       const mappedUser: User = {
         id: user._id || user.id,
@@ -283,29 +307,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         monthlySpend: 0,
       };
       setCurrentUser(mappedUser);
-      setIsAdmin(Boolean(user.role === "super_admin"));
-      setView(user.role === "super_admin" ? "admin" : "dashboard");
-      if (user.role === "super_admin") {
-        try {
-          const overview = await api.get("/admin/overview");
-          const nextUsers = (overview.data.users || []).map((entry: any) => ({
-            id: entry._id || entry.id,
-            ...entry,
-            name: entry.name,
-            email: entry.email,
-            plan: entry.plan || "FREE",
-            blocked: Boolean(entry.blocked),
-            joinedAt: entry.createdAt
-              ? new Date(entry.createdAt).toISOString().split("T")[0]
-              : new Date().toISOString().split("T")[0],
-            panels: [],
-            monthlySpend: 0,
-          }));
-          setUsers(nextUsers);
-          setSubscriptionPriceState(overview.data.subscriptionPrice || 49);
-        } catch {
-          setUsers([]);
-        }
+      setIsAdmin(true);
+      setView("admin");
+      if (typeof window !== "undefined") {
+        window.history.pushState({}, "", "/admin");
+      }
+      try {
+        const overview = await api.get("/admin/overview");
+        const nextUsers = (overview.data.users || []).map((entry: any) => ({
+          id: entry._id || entry.id,
+          ...entry,
+          name: entry.name,
+          email: entry.email,
+          plan: entry.plan || "FREE",
+          blocked: Boolean(entry.blocked),
+          joinedAt: entry.createdAt
+            ? new Date(entry.createdAt).toISOString().split("T")[0]
+            : new Date().toISOString().split("T")[0],
+          panels: [],
+          monthlySpend: 0,
+        }));
+        setUsers(nextUsers);
+        setSubscriptionPriceState(overview.data.subscriptionPrice || 49);
+      } catch {
+        setUsers([]);
       }
       return { ok: true };
     } catch (error) {
@@ -319,6 +344,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     setIsAdmin(false);
     setView("login");
+    if (typeof window !== "undefined") {
+      window.history.pushState({}, "", "/");
+    }
   }
 
   async function registerUser(
@@ -477,8 +505,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       unblockUser,
       addPanel,
       setSubscriptionPrice,
+      isAuthReady,
     }),
-    [currentUser, isAdmin, view, users, subscriptionPrice],
+    [currentUser, isAdmin, view, users, subscriptionPrice, isAuthReady],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

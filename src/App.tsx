@@ -9,7 +9,7 @@ import PanelCreatedSuccess from "./components/PanelCreatedSuccess";
 import PanelDetails from "./components/PanelDetails";
 
 function AppRouter() {
-  const { view, currentUser } = useApp();
+  const { view, currentUser, isAuthReady } = useApp();
   const [path, setPath] = useState(() => window.location.pathname);
 
   useEffect(() => {
@@ -27,6 +27,10 @@ function AppRouter() {
   }, []);
 
   const normalizedPath = path.replace(/\/+$/, "") || "/";
+
+  if (!isAuthReady) {
+    return null;
+  }
 
   if (normalizedPath.startsWith("/panel/")) {
     const panelId = normalizedPath.replace("/panel/", "").replace(/\/$/, "");

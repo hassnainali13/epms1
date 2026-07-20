@@ -39,6 +39,13 @@ export default function LoginPage({
   function switchMode(m: Mode) {
     reset();
     setMode(m);
+    if (typeof window !== "undefined") {
+      if (m === "admin") {
+        window.history.pushState({}, "", "/admin-login");
+      } else if (m === "login") {
+        window.history.pushState({}, "", "/");
+      }
+    }
   }
 
   async function handleLogin(email: string, password: string) {
@@ -290,7 +297,7 @@ export default function LoginPage({
                 >
                   <Shield size={11} />
                   Administrator access
-                </button> 
+                </button>
               )}
             </div>
           )}

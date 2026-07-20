@@ -2162,10 +2162,6 @@ export default function CreatePanelWizard({
   useEffect(() => {
     let mounted = true;
     async function load() {
-      if (!isPremium) {
-        setInstrumentList([]);
-        return;
-      }
       try {
         const hasToken = !!localStorage.getItem("epms_token");
         console.log("Auth token present:", hasToken);
@@ -2174,12 +2170,6 @@ export default function CreatePanelWizard({
         const all = res.data.instruments || [];
         console.log("Total Instruments (API):", all.length);
         console.log("Sample Instruments:", all.slice(0, 5));
-        const categories = Array.from(
-          new Set(
-            all.map((i: any) => String(i.category || "")).filter(Boolean),
-          ),
-        );
-        console.log("Categories found (sample):", categories.slice(0, 20));
         const active = all.filter(
           (it: any) => String(it.status || "").toLowerCase() === "active",
         );
@@ -2197,7 +2187,7 @@ export default function CreatePanelWizard({
     return () => {
       mounted = false;
     };
-  }, [isPremium]);
+  }, []);
 
   function set(key: keyof FormData, value: any) {
     setData((prev) => ({ ...prev, [key]: value }));

@@ -1116,23 +1116,27 @@ export default function InstrumentMaster() {
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Category
                 </label>
-                <select
+                <input
                   required
                   value={form.category}
                   onChange={(e) =>
                     setForm({ ...form, category: e.target.value })
                   }
+                  list="instrument-category-list"
+                  placeholder="Type or select category"
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-                >
-                  <option value="">Select category</option>
+                />
+                <datalist id="instrument-category-list">
                   {categories
                     .filter((c) => c && c !== "All Categories")
                     .map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
+                      <option key={c} value={c} />
                     ))}
-                </select>
+                </datalist>
+                <p className="mt-1 text-xs text-slate-500">
+                  Start typing to create a new category or choose an existing
+                  one.
+                </p>
               </div>
               {/* Removed additional fields: manufacturer, modelNumber, rating, voltage, current, image, datasheet, notes */}
               <div className="md:col-span-2 flex justify-end gap-2">
