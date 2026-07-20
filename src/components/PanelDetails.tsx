@@ -373,7 +373,10 @@ function OverviewSection({
       icon: Building2,
       label: "Company",
       value:
-        panel?.companyName || panel?.company || currentUser?.companyName || "—",
+        panel?.companyName ||
+        (typeof panel?.company === "string" ? panel.company : undefined) ||
+        currentUser?.companyName ||
+        "—",
       color: "#0EA5E9",
     },
     {
@@ -522,20 +525,6 @@ function ElectricalSection({ panel }: { panel?: PanelRecord }) {
       value: getDisplayValue(panel?.technicalSpecs?.mountingType),
     },
     { label: "Manufacturer", value: getDisplayValue(panel?.manufacturer) },
-    { label: "Installer", value: getDisplayValue(panel?.installer) },
-    {
-      label: "Manufacturing Date",
-      value: formatDateValue(panel?.manufacturingDate),
-    },
-    {
-      label: "Installation Date",
-      value: formatDateValue(panel?.installationDate),
-    },
-    {
-      label: "Installation Location",
-      value: getDisplayValue(panel?.installationLocation),
-      span: true,
-    },
   ];
 
   return (
@@ -548,6 +537,41 @@ function ElectricalSection({ panel }: { panel?: PanelRecord }) {
       />
       <InfoGrid rows={rows} />
     </SectionCard>
+  );
+}
+
+function InfoCard({
+  icon: Icon,
+  title,
+  value,
+  color,
+}: {
+  icon: ElementType;
+  title: string;
+  value?: string;
+  color: string;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_6px_rgba(0,0,0,0.04)] p-5 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-shadow group h-full">
+      <div className="flex items-start justify-between mb-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center"
+          style={{ backgroundColor: color + "15" }}
+        >
+          <Icon size={17} style={{ color }} />
+        </div>
+        <ChevronRight
+          size={13}
+          className="text-[#CBD5E1] group-hover:text-[#94A3B8] transition-colors mt-1"
+        />
+      </div>
+      <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">
+        {title}
+      </p>
+      <p className="text-sm font-bold text-[#0F172A] leading-snug">
+        {value || "—"}
+      </p>
+    </div>
   );
 }
 
@@ -1167,7 +1191,43 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
 
   const content: Record<Tab, ReactNode> = {
     overview: (
-      <OverviewSection panel={panel || undefined} currentUser={currentUser} />
+      <>
+        <OverviewSection panel={panel || undefined} currentUser={currentUser} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <InfoCard
+            icon={CalendarDays}
+            title="Manufactured Date"
+            value={formatDateValue(panel?.manufacturingDate)}
+            color="#0EA5E9"
+          />
+          <InfoCard
+            icon={UserCheck}
+            title="Manufactured By"
+            value={panel?.manufacturer || "—"}
+            color="#8B5CF6"
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+          <InfoCard
+            icon={UserCheck}
+            title="Installer Name"
+            value={panel?.installer || "—"}
+            color="#22C55E"
+          />
+          <InfoCard
+            icon={CalendarDays}
+            title="Installation Date"
+            value={formatDateValue(panel?.installationDate)}
+            color="#F59E0B"
+          />
+          <InfoCard
+            icon={MapPin}
+            title="Installation Location"
+            value={panel?.installationLocation || "—"}
+            color="#06B6D4"
+          />
+        </div>
+      </>
     ),
     electrical: <ElectricalSection panel={panel || undefined} />,
     motors: <MotorsSection panel={panel || undefined} />,
