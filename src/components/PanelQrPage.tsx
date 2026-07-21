@@ -52,6 +52,20 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     }
   }, [panel, canCompleteInstallation]);
 
+  // Auto-fill installation date with today's date when installer opens install mode
+  useEffect(() => {
+    if (mode === "install" && installData.installationDate === "") {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      setInstallData((prev) => ({
+        ...prev,
+        installationDate: `${yyyy}-${mm}-${dd}`,
+      }));
+    }
+  }, [mode, installData.installationDate]);
+
   useEffect(() => {
     if (
       panel &&
