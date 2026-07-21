@@ -17,6 +17,7 @@ import {
   Clock,
   Plus,
   Eye,
+  Trash2,
   Edit3,
   ArrowUpRight,
   Menu,
@@ -35,6 +36,16 @@ import InstallerCodeSettings from "./InstallerCodeSettings";
 import { SearchPanelModal } from "./dashboard/SearchPanelModal";
 import { StatusBadge } from "./dashboard/StatusBadge";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { deletePanel } from "../services/panelService";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from "./ui/dialog";
 import InstrumentMaster from "./InstrumentMaster";
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
@@ -87,8 +98,17 @@ export default function EPMSDashboard() {
     filteredPanels,
     saveCompany,
     uploadLogo,
+    removePanel,
   } = useDashboardData();
   const [activeNav, setActiveNav] = useState("dashboard");
+  const [selectedDeletePanel, setSelectedDeletePanel] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const canEditInstallerCode =
     currentUser.role === "company_admin" || currentUser.role === "super_admin";
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -743,16 +763,27 @@ export default function EPMSDashboard() {
                   ) : (
                     <>
                       {/* Table header */}
-                      <div className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px] gap-4 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E5E7EB] text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                      <div className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px] gap-4 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E5E7EB] text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider">
                         <span>Panel</span>
                         <span>Customer</span>
                         <span>Status</span>
                         <span>Created</span>
                         <span>Edit</span>
                         <span>QR</span>
+                        <span>View</span>
                         <span />
                       </div>
 
+                      {deleteSuccess && (
+                        <div className="col-span-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                          {deleteSuccess}
+                        </div>
+                      )}
+                      {deleteError && (
+                        <div className="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                          {deleteError}
+                        </div>
+                      )}
                       {filteredPanels.length === 0 ? (
                         <p className="text-xs text-[#94A3B8] text-center py-8">
                           No panels match your filter.
@@ -761,7 +792,7 @@ export default function EPMSDashboard() {
                         filteredPanels.map((panel) => (
                           <div
                             key={panel.id}
-                            className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
+                            className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
                           >
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-[#0F172A] truncate">
@@ -820,11 +851,101 @@ export default function EPMSDashboard() {
                             >
                               <Eye size={14} />
                             </button>
+                            <button
+                              onClick={() => {
+                                setSelectedDeletePanel({
+                                  id: panel._id || panel.id || "",
+                                  name:
+                                    panel.panelName ||
+                                    panel.name ||
+                                    panel.panelId ||
+                                    "panel",
+                                });
+                                setDeleteError(null);
+                                setDeleteSuccess(null);
+                                setShowDeleteDialog(true);
+                              }}
+                              className="p-1.5 rounded-lg text-[#64748B] hover:text-[#DC2626] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                              title="Delete panel"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         ))
                       )}
 
                       {/* Free plan add-more CTA */}
+                      {showDeleteDialog && selectedDeletePanel && (
+                        <Dialog
+                          open={showDeleteDialog}
+                          onOpenChange={setShowDeleteDialog}
+                        >
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Delete Panel?</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to permanently delete this
+                                panel? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+
+                            {deleteError && (
+                              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                {deleteError}
+                              </div>
+                            )}
+
+                            <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E5E7EB]">
+                              <p className="text-sm text-[#0F172A] font-semibold">
+                                {selectedDeletePanel.name}
+                              </p>
+                              <p className="text-xs text-[#64748B] mt-1">
+                                This panel will be removed permanently from your
+                                account.
+                              </p>
+                            </div>
+                            <DialogFooter>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setShowDeleteDialog(false);
+                                  setDeleteError(null);
+                                }}
+                                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (!selectedDeletePanel?.id) return;
+                                  setDeleting(true);
+                                  setDeleteError(null);
+                                  try {
+                                    await deletePanel(selectedDeletePanel.id);
+                                    removePanel(selectedDeletePanel.id);
+                                    setDeleteSuccess(
+                                      "Panel deleted successfully.",
+                                    );
+                                    setShowDeleteDialog(false);
+                                  } catch (error) {
+                                    setDeleteError(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Unable to delete panel.",
+                                    );
+                                  } finally {
+                                    setDeleting(false);
+                                  }
+                                }}
+                                className="inline-flex h-10 items-center justify-center rounded-xl bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
+                              >
+                                {deleting ? "Deleting..." : "Delete"}
+                              </button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                       {qrPanelId && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
                           <div className="relative w-full max-w-3xl rounded-3xl bg-white border border-[#E5E7EB] shadow-2xl overflow-hidden">

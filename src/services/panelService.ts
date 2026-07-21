@@ -22,6 +22,11 @@ export async function fetchPanels(): Promise<Panel[]> {
   }));
 }
 
+export async function deletePanel(panelId: string) {
+  const res = await api.delete(`/panels/${panelId}`);
+  return res.data;
+}
+
 export async function fetchCompanyProfile() {
   const res = await api.get("/company");
   return res.data.company;

@@ -114,6 +114,12 @@ export function useDashboardData() {
     await loadPanels();
   };
 
+  const removePanel = (panelId: string) => {
+    setPanels((prev) =>
+      prev.filter((panel) => panel._id !== panelId && panel.id !== panelId),
+    );
+  };
+
   const filteredPanels = useMemo(() => {
     if (!panelSearch) return panels;
 
@@ -141,5 +147,6 @@ export function useDashboardData() {
     saveCompany,
     uploadLogo,
     refreshPanels,
+    removePanel,
   };
 }
