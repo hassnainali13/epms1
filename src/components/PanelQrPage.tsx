@@ -121,7 +121,7 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
         </div>
 
         <div className="p-8 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="rounded-2xl border border-[#E5E7EB] p-4">
               <p className="text-xs text-[#64748B]">Panel ID</p>
               <p className="mt-2 text-sm font-semibold text-[#0F172A]">
@@ -132,6 +132,12 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
               <p className="text-xs text-[#64748B]">Status</p>
               <p className="mt-2 text-sm font-semibold text-[#0F172A]">
                 {panel.status}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[#E5E7EB] p-4">
+              <p className="text-xs text-[#64748B]">Company</p>
+              <p className="mt-2 text-sm font-semibold text-[#0F172A]">
+                {panel.companyName || panel.company || "—"}
               </p>
             </div>
           </div>

@@ -374,7 +374,11 @@ function OverviewSection({
       label: "Company",
       value:
         panel?.companyName ||
-        (typeof panel?.company === "string" ? panel.company : undefined) ||
+        (typeof panel?.company === "string"
+          ? panel.company
+          : typeof panel?.company === "object"
+            ? panel.company?.name
+            : undefined) ||
         currentUser?.companyName ||
         "—",
       color: "#0EA5E9",
@@ -966,7 +970,7 @@ function DocumentsSection({
   onUpload,
 }: {
   documents: DocumentItem[];
-  onUpload: () => void;
+  onUpload?: () => void;
 }) {
   return (
     <SectionCard>
@@ -976,12 +980,14 @@ function DocumentsSection({
         subtitle={`${documents.length} files attached to this panel`}
         accent="#06B6D4"
         right={
-          <button
-            onClick={onUpload}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#0EA5E9] hover:bg-[#0284C7] rounded-xl transition-colors shadow-sm"
-          >
-            <Upload size={12} /> Upload
-          </button>
+          onUpload ? (
+            <button
+              onClick={onUpload}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white bg-[#0EA5E9] hover:bg-[#0284C7] rounded-xl transition-colors shadow-sm"
+            >
+              <Upload size={12} /> Upload
+            </button>
+          ) : undefined
         }
       />
       <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1242,7 +1248,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     documents: (
       <DocumentsSection
         documents={documents}
-        onUpload={() => uploadRef.current?.click()}
+        onUpload={currentUser ? () => uploadRef.current?.click() : undefined}
       />
     ),
     timeline: <TimelineSection />,

@@ -1,7 +1,9 @@
 import { ArrowLeft, Download, Info, Printer, QrCode, Zap } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { useRef } from "react";
+import { useApp } from "../context/AppContext";
 import type { Panel } from "../context/AppContext";
+import stickerSafetyFirst from "../../assets/sticker-safetyfirst.PNG";
 
 function formatDateValue(value?: string) {
   if (!value) return "—";
@@ -28,13 +30,32 @@ export default function PanelQRCode({
       ? `${window.location.origin}/panel/${panel.panelId || panel.id}`
       : null);
 
+  const { currentUser } = useApp();
+
   const qrImageSrc = qrPayload
     ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
         qrPayload,
       )}`
     : null;
 
-  const loadImageDataUrl = (src: string): Promise<string> =>
+  const companyLogoSrc =
+    panel?.companyLogoUrl ||
+    (typeof panel?.company === "object" ? panel.company?.logoUrl : undefined) ||
+    currentUser?.companyLogoUrl ||
+    undefined;
+
+  const companyName =
+    panel?.companyName ||
+    (typeof panel?.company === "object" ? panel.company?.name : undefined) ||
+    currentUser?.companyName ||
+    currentUser?.company ||
+    "Company";
+
+  // Loads an image and resolves both its data URL and its natural
+  // dimensions, so callers can scale it while preserving aspect ratio.
+  const loadImageWithDimensions = (
+    src: string,
+  ): Promise<{ dataUrl: string; width: number; height: number }> =>
     new Promise((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -45,11 +66,37 @@ export default function PanelQRCode({
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject(new Error("Unable to create canvas context"));
         ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL("image/png"));
+        resolve({
+          dataUrl: canvas.toDataURL("image/png"),
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
       };
-      img.onerror = () => reject(new Error("Failed to load QR image"));
+      img.onerror = () => reject(new Error("Failed to load image"));
       img.src = src;
     });
+
+  const loadImageDataUrl = (src: string): Promise<string> =>
+    loadImageWithDimensions(src).then((result) => result.dataUrl);
+
+  // Given a source image's natural size, returns a width/height that fits
+  // inside the provided bounding box without exceeding it, preserving the
+  // original aspect ratio (no stretching or distortion).
+  const fitWithinBounds = (
+    naturalWidth: number,
+    naturalHeight: number,
+    maxWidth: number,
+    maxHeight: number,
+  ) => {
+    if (!naturalWidth || !naturalHeight) {
+      return { width: maxWidth, height: maxHeight };
+    }
+    const scale = Math.min(maxWidth / naturalWidth, maxHeight / naturalHeight);
+    return {
+      width: naturalWidth * scale,
+      height: naturalHeight * scale,
+    };
+  };
 
   const createStickerPdf = async () => {
     const qrData = qrImageSrc ? await loadImageDataUrl(qrImageSrc) : null;
@@ -64,17 +111,41 @@ export default function PanelQRCode({
     });
 
     let y = margin;
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont("helvetica", "bold");
     pdf.setTextColor("#0F172A");
-    pdf.setFontSize(7.5);
-    pdf.text("SCAN TO VIEW PANEL DETAILS", width / 2, y, { align: "center" });
+    pdf.setFontSize(10);
 
-    y += 8;
-    pdf.setDrawColor(59, 130, 246);
-    pdf.setLineWidth(0.6);
-    pdf.line(margin, y, width - margin, y);
+    // ---- Header: company logo + name, proportionally sized and aligned ----
+    let logoInfo: { dataUrl: string; width: number; height: number } | null = null;
+    if (companyLogoSrc) {
+      try {
+        logoInfo = await loadImageWithDimensions(companyLogoSrc);
+      } catch {
+        logoInfo = null;
+      }
+    }
 
-    y += 8;
+    const maxLogoWidth = 20;
+    const maxLogoHeight = 20;
+    const logoDims = logoInfo
+      ? fitWithinBounds(logoInfo.width, logoInfo.height, maxLogoWidth, maxLogoHeight)
+      : { width: 0, height: 0 };
+
+    const headerRowHeight = Math.max(logoDims.height, 8);
+
+    if (logoInfo) {
+      // Vertically center the logo within the header row.
+      const logoY = y + (headerRowHeight - logoDims.height) / 2;
+      pdf.addImage(logoInfo.dataUrl, "PNG", margin, logoY, logoDims.width, logoDims.height);
+    }
+
+    // Position the company name beside the logo, sharing its vertical center.
+    const nameX = margin + (logoInfo ? logoDims.width + 3 : 0);
+    const nameY = y + headerRowHeight / 2 + 2;
+    pdf.text(companyName, nameX, nameY, { maxWidth: contentWidth - (logoInfo ? logoDims.width + 3 : 0) });
+
+    y += headerRowHeight + 6;
+
     const qrSize = 52;
     const qrX = (width - qrSize) / 2;
     if (qrData) {
@@ -82,17 +153,16 @@ export default function PanelQRCode({
     }
 
     y += qrSize + 6;
+    pdf.setFont("helvetica", "normal");
     pdf.setFontSize(6.8);
     pdf.setTextColor("#475569");
     pdf.text("Scan to access panel details instantly", width / 2, y, {
       align: "center",
     });
 
-    y += 12;
+    y += 10;
     const sectionPadding = 4;
     const rowHeight = 7;
-    const labelWidth = 28;
-    const valueWidth = contentWidth - labelWidth - 4;
 
     const basicRows = [
       { label: "Panel ID", value: panel?.panelId || panel?.id || "—" },
@@ -101,10 +171,6 @@ export default function PanelQRCode({
       { label: "Status", value: panel?.status || "—" },
       { label: "Customer", value: panel?.customer || "—" },
       { label: "Project", value: panel?.projectName || "—" },
-      {
-        label: "Location",
-        value: panel?.installationLocation || panel?.location || "—",
-      },
     ];
 
     pdf.setFillColor(59, 130, 246);
@@ -139,7 +205,7 @@ export default function PanelQRCode({
       }
     });
 
-    y += basicHeight + 10;
+    y += basicHeight + 8;
     const techRows = [
       { label: "Voltage", value: panel?.technicalSpecs?.voltage || "—" },
       { label: "Current", value: panel?.technicalSpecs?.current || "—" },
@@ -207,9 +273,38 @@ export default function PanelQRCode({
     });
 
     y += techHeight + 8;
+
+    // ---- Single safety sticker image, centered, aspect ratio preserved ----
+    try {
+      const stickerInfo = await loadImageWithDimensions(stickerSafetyFirst);
+      const maxStickerWidth = contentWidth;
+      const maxStickerHeight = 18;
+      const stickerDims = fitWithinBounds(
+        stickerInfo.width,
+        stickerInfo.height,
+        maxStickerWidth,
+        maxStickerHeight,
+      );
+      const stickerX = (width - stickerDims.width) / 2;
+      const stickerYOffset = 5; // shift sticker up by ~0.5cm
+      const stickerY = y - stickerYOffset;
+      pdf.addImage(
+        stickerInfo.dataUrl,
+        "PNG",
+        stickerX,
+        stickerY,
+        stickerDims.width,
+        stickerDims.height,
+      );
+      y = stickerY + stickerDims.height + 6;
+    } catch {
+      // If the sticker asset fails to load, skip it rather than break the PDF.
+    }
+
+    pdf.setFont("helvetica", "normal");
     pdf.setFontSize(6.2);
     pdf.setTextColor("#94A3B8");
-    pdf.text("Reliable Power. Smart Control.", width / 2, height - 6, {
+    pdf.text("Reliable Power. Smart Control.", width / 2, Math.min(y, height - 6), {
       align: "center",
     });
 
@@ -376,10 +471,10 @@ export default function PanelQRCode({
               { label: "Status", value: panel?.status || "—" },
               { label: "Customer", value: panel?.customer || "—" },
               { label: "Project", value: panel?.projectName || "—" },
-              {
-                label: "Location",
-                value: panel?.installationLocation || panel?.location || "—",
-              },
+              // {
+              //   label: "Location",
+              //   value: panel?.installationLocation || panel?.location || "—",
+              // },
             ].map(({ label, value }) => (
               <div
                 key={label}
