@@ -384,13 +384,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   function logout() {
     startLoading();
     try {
+      const previousRole = currentUser?.role;
       localStorage.removeItem("epms_token");
       localStorage.removeItem("epms_refresh_token");
       setCurrentUser(null);
       setIsAdmin(false);
       setView("login");
       if (typeof window !== "undefined") {
-        window.history.pushState({}, "", "/");
+        const nextPath = previousRole === "super_admin" ? "/admin-login" : "/";
+        window.history.pushState({}, "", nextPath);
+        window.dispatchEvent(new PopStateEvent("popstate"));
       }
     } finally {
       stopLoading();
