@@ -351,15 +351,7 @@ export default function PanelQRCode({
     >
       <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden print:shadow-none print:border-black/10">
         <div className="flex flex-col gap-3 px-6 py-4 border-b border-[#F1F5F9] sm:flex-row sm:items-center sm:justify-between">
-          {onBack ? (
-            <button
-              onClick={onBack}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[#0F172A] hover:text-[#0369A1] transition-colors"
-            >
-              <ArrowLeft size={14} />
-              Back
-            </button>
-          ) : null}
+         
 
           <div className="flex items-center gap-3">
             <div

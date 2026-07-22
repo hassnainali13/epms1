@@ -35,23 +35,6 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
       "—"
     : "—";
 
-  const companyLogoSrc =
-    panel?.companyLogoUrl ||
-    (typeof panel?.company === "object" ? panel.company?.logoUrl : undefined) ||
-    undefined;
-
-  const qrPayload =
-    panel?.qrUrl ||
-    (typeof window !== "undefined" && panel?.panelId
-      ? `${window.location.origin}/panel/${panel.panelId}`
-      : null);
-
-  const qrImageSrc = qrPayload
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-        qrPayload,
-      )}`
-    : null;
-
   useEffect(() => {
     const getPanel = async () => {
       try {
@@ -143,9 +126,9 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-6 flex items-center justify-center">
+    <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 flex items-center justify-center">
       <div className="w-full max-w-3xl bg-white rounded-3xl border border-[#E5E7EB] shadow-xl overflow-hidden">
-        <div className="px-8 py-6 border-b border-[#E5E7EB] flex items-center gap-3">
+        <div className="px-4 py-4 sm:px-8 sm:py-6 border-b border-[#E5E7EB] flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#0EA5E9] flex items-center justify-center text-white">
             <QrCode size={20} />
           </div>
@@ -159,8 +142,8 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
           </div>
         </div>
 
-        <div className="p-8 space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
+        <div className="p-4 space-y-4 sm:p-8 sm:space-y-6">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <div className="rounded-2xl border border-[#E5E7EB] p-4">
               <p className="text-xs text-[#64748B]">Panel ID</p>
               <p className="mt-2 text-sm font-semibold text-[#0F172A]">
@@ -181,43 +164,9 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[#E5E7EB] p-5 bg-[#F8FAFC] flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-56 h-56 bg-white border-2 border-[#0F172A] rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-center">
-                {qrImageSrc ? (
-                  <img
-                    src={qrImageSrc}
-                    alt="Panel QR Code"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="text-center text-xs text-[#64748B]">
-                    QR not available
-                  </div>
-                )}
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#16A34A] to-[#2563EB] flex items-center justify-center shadow-lg">
-                  <span className="text-[10px] font-bold tracking-[0.22em] text-white">
-                    EPMS
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-center">
-              <p className="text-sm font-semibold text-[#0F172A]">
-                {panel.panelName || panel.panelId}
-              </p>
-              <p className="text-xs text-[#64748B] mt-1">
-                Scan to access panel details instantly
-              </p>
-            </div>
-          </div>
-
           {mode === "view" ? (
             <>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
                 <div className="rounded-2xl border border-[#E5E7EB] p-4">
                   <p className="text-xs text-[#64748B]">Customer</p>
                   <p className="mt-2 text-sm text-[#0F172A]">
@@ -272,7 +221,7 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[#0F172A]">
                     Installer Name
@@ -331,7 +280,7 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
 
               <button
                 onClick={handleInstallSubmit}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-[#0EA5E9] text-white rounded-2xl hover:bg-[#0284C7] transition-colors"
+                className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 bg-[#0EA5E9] text-white rounded-2xl hover:bg-[#0284C7] transition-colors sm:w-auto"
               >
                 <ArrowRight size={16} />
                 Save installation details
