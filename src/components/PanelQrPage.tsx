@@ -74,17 +74,6 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     }
   }, [mode, installData.installationDate]);
 
-  useEffect(() => {
-    if (
-      panel &&
-      !canCompleteInstallation &&
-      window.location.pathname.startsWith("/panel/")
-    ) {
-      window.history.replaceState({}, "", `/panels/${panelId}`);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    }
-  }, [panel, canCompleteInstallation, panelId]);
-
   const handleInstallSubmit = async () => {
     if (!panel) return;
     try {
