@@ -561,7 +561,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSubscriptionPrice,
       isAuthReady,
     }),
-    [currentUser, isAdmin, view, users, subscriptionPrice, appLoading, isAuthReady],
+    [
+      currentUser,
+      isAdmin,
+      view,
+      users,
+      subscriptionPrice,
+      appLoading,
+      isAuthReady,
+    ],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

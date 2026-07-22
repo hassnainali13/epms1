@@ -67,11 +67,12 @@ function AppRouter() {
   ) {
     content = <EPMSDashboard />;
   } else if (currentUser) {
-    content = currentUser.role === "super_admin" ? (
-      <AdminDashboard />
-    ) : (
-      <EPMSDashboard />
-    );
+    content =
+      currentUser.role === "super_admin" ? (
+        <AdminDashboard />
+      ) : (
+        <EPMSDashboard />
+      );
   } else if (normalizedPath === "/admin-login") {
     content = <LoginPage initialMode="admin" />;
   } else if (view === "dashboard") {

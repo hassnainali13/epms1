@@ -1115,7 +1115,7 @@ function TimelineSection() {
 }
 
 export default function PanelDetails({ panelId }: { panelId: string }) {
-  const { currentUser } = useApp();
+  const { currentUser, startLoading, stopLoading } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -1128,6 +1128,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
   useEffect(() => {
     let mounted = true;
     async function loadPanel() {
+      startLoading();
       try {
         setLoading(true);
         setError(null);
@@ -1145,7 +1146,10 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
           err instanceof Error ? err.message : "Unable to load panel details.",
         );
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          stopLoading();
+        }
       }
     }
 
@@ -1153,7 +1157,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     return () => {
       mounted = false;
     };
-  }, [panelId, currentUser]);
+  }, [panelId, currentUser, startLoading, stopLoading]);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -1312,18 +1316,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] px-10 py-8 text-center">
-          <p className="text-sm font-semibold text-[#0F172A]">
-            Loading panel details…
-          </p>
-          <p className="text-xs text-[#64748B] mt-2">
-            Fetching the latest saved record from the backend.
-          </p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   if (error || !panel) {
