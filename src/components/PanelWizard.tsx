@@ -34,6 +34,8 @@ interface DiagramEntry {
   existingUrl?: string;
   fileType?: string;
   publicId?: string;
+  source?: "upload" | "library";
+  libraryId?: string;
 }
 
 interface FormData {
@@ -1178,6 +1180,28 @@ function DiagramsStep({
   data: FormData;
   set: (k: keyof FormData, v: any) => void;
 }) {
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [libraryDiagrams, setLibraryDiagrams] = useState<any[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadLibraryDiagrams() {
+      try {
+        const response = await api.get("/diagrams");
+        if (mounted) {
+          setLibraryDiagrams(response.data.diagrams || []);
+        }
+      } catch (error) {
+        console.error("Failed to load diagram library", error);
+      }
+    }
+
+    loadLibraryDiagrams();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const updateDiagram = (index: number, patch: Partial<DiagramEntry>) => {
     const nextDiagrams = [...(data.diagrams || [])];
     nextDiagrams[index] = { ...(nextDiagrams[index] || {}), ...patch };
@@ -1190,6 +1214,23 @@ function DiagramsStep({
       ...(data.diagrams || []),
       { name: "", file: null, existingUrl: "" },
     ]);
+  };
+
+  const addLibraryDiagram = (item: any) => {
+    if ((data.diagrams || []).length >= 5) return;
+    set("diagrams", [
+      ...(data.diagrams || []),
+      {
+        name: item.name || "Wiring Diagram",
+        file: null,
+        existingUrl: item.url || "",
+        fileType: item.fileType || "",
+        publicId: item.publicId || "",
+        source: "library" as const,
+        libraryId: item.libraryId || item.id || item._id || "",
+      },
+    ]);
+    setShowLibraryPicker(false);
   };
 
   const removeDiagram = (index: number) => {
@@ -1322,13 +1363,76 @@ function DiagramsStep({
       </div>
 
       {(data.diagrams || []).length < 5 && (
-        <button
-          type="button"
-          onClick={addDiagram}
-          className="mt-4 flex items-center gap-2 rounded-xl border border-dashed border-[#1DA1F2] bg-[#F0F9FF] px-4 py-2.5 text-sm font-semibold text-[#1DA1F2] hover:bg-[#E0F2FE] transition-colors"
-        >
-          <Upload size={14} /> Add another diagram
-        </button>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => setShowLibraryPicker(true)}
+            className="flex items-center gap-2 rounded-xl border border-[#1DA1F2] bg-white px-4 py-2.5 text-sm font-semibold text-[#1DA1F2] hover:bg-[#F0F9FF] transition-colors"
+          >
+            <FileText size={14} /> Add from library
+          </button>
+          <button
+            type="button"
+            onClick={addDiagram}
+            className="flex items-center gap-2 rounded-xl border border-dashed border-[#1DA1F2] bg-[#F0F9FF] px-4 py-2.5 text-sm font-semibold text-[#1DA1F2] hover:bg-[#E0F2FE] transition-colors"
+          >
+            <Upload size={14} /> Upload new diagram
+          </button>
+        </div>
+      )}
+
+      {showLibraryPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="w-full max-w-xl rounded-3xl border border-[#E5E7EB] bg-white p-5 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-base font-semibold text-[#0F172A]">
+                  Choose a saved diagram
+                </p>
+                <p className="text-sm text-[#64748B] mt-1">
+                  Reuse any diagram already stored for this company.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLibraryPicker(false)}
+                className="rounded-xl border border-[#E5E7EB] p-2 text-[#64748B] hover:bg-[#F8FAFC]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-2 max-h-80 overflow-y-auto pr-1">
+              {libraryDiagrams.length ? (
+                libraryDiagrams.map((item) => (
+                  <button
+                    key={item.id || item._id || item.name}
+                    type="button"
+                    onClick={() => addLibraryDiagram(item)}
+                    className="flex w-full items-center justify-between rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 text-left hover:border-[#1DA1F2] hover:bg-[#F0F9FF] transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[#0F172A]">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-[#64748B] mt-1">
+                        {item.fileType || "Saved diagram"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-[#1DA1F2]">
+                      Use
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-6 text-center text-sm text-[#64748B]">
+                  No saved diagrams yet. Upload one from the Diagram Library
+                  page first.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2318,6 +2422,9 @@ export default function CreatePanelWizard({
             file: null,
             existingUrl: diagram.url || "",
             fileType: diagram.fileType || "",
+            publicId: diagram.publicId || "",
+            source: diagram.source || "upload",
+            libraryId: diagram.libraryId || "",
           })),
         };
 
@@ -2511,6 +2618,8 @@ export default function CreatePanelWizard({
           url: response.data.url as string,
           publicId: response.data.publicId || "",
           fileType: entry.fileType || entry.file.type || "",
+          source: entry.source || "upload",
+          libraryId: entry.libraryId || "",
         };
       };
 
@@ -2539,6 +2648,8 @@ export default function CreatePanelWizard({
               url: entry.existingUrl,
               publicId: existingDiagram.publicId || "",
               fileType: entry.fileType || "",
+              source: entry.source || "upload",
+              libraryId: entry.libraryId || "",
             };
           }
           return null;

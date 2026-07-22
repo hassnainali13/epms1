@@ -7,7 +7,6 @@ import {
   UserCheck,
   Wrench,
   QrCode,
-  Boxes,
   BarChart3,
   Settings,
   LogOut,
@@ -44,9 +43,9 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from "./ui/dialog";
 import InstrumentMaster from "./InstrumentMaster";
+import DiagramLibrary from "./DiagramLibrary";
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
@@ -58,6 +57,7 @@ const navItems = [
   { icon: UserCheck, label: "Customers", id: "customers" },
   { icon: MapPin, label: "Installations", id: "installations" },
   { icon: QrCode, label: "QR Codes", id: "qrcodes" },
+  { icon: FileText, label: "Diagrams", id: "diagrams" },
   { icon: BarChart3, label: "Reports", id: "reports" },
   { icon: Wrench, label: "Maintenance", id: "maintenance" },
 ].filter((item) => item.id !== "instrument-master");
@@ -110,13 +110,18 @@ export default function EPMSDashboard() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const canEditInstallerCode =
-    currentUser.role === "company_admin" || currentUser.role === "super_admin";
+    currentUser?.role === "company_admin" ||
+    currentUser?.role === "super_admin";
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
   const [showSearch, setShowSearch] = useState(false);
   const [qrPanelId, setQrPanelId] = useState<string | null>(null);
+  const showDashboardOverview =
+    activeNav === "dashboard" || activeNav === "panels";
+  const showDedicatedPageOnly =
+    activeNav === "diagrams" || activeNav === "employees";
 
   function triggerUpgrade(reason?: string) {
     setUpgradeReason(reason);
@@ -327,27 +332,29 @@ export default function EPMSDashboard() {
         {/* ── Content ── */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Page header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-[#0F172A]">Dashboard</h1>
-              <p className="text-sm text-[#64748B] mt-0.5">
-                Welcome back, {currentUser.name.split(" ")[0]}
-              </p>
+          {showDashboardOverview && (
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-bold text-[#0F172A]">Dashboard</h1>
+                <p className="text-sm text-[#64748B] mt-0.5">
+                  Welcome back, {currentUser.name.split(" ")[0]}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  window.history.pushState({}, "", "/panels/create");
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0EA5E9] rounded-xl hover:bg-[#0284C7] transition-colors shadow-sm"
+              >
+                <Plus size={14} />
+                New Panel
+              </button>
             </div>
-            <button
-              onClick={() => {
-                window.history.pushState({}, "", "/panels/create");
-                window.dispatchEvent(new PopStateEvent("popstate"));
-              }}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0EA5E9] rounded-xl hover:bg-[#0284C7] transition-colors shadow-sm"
-            >
-              <Plus size={14} />
-              New Panel
-            </button>
-          </div>
+          )}
 
           {/* Free plan limit warning */}
-          {isFree && panels.length === 3 && (
+          {!showDedicatedPageOnly && isFree && panels.length === 3 && (
             <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <div className="flex items-center gap-3">
                 <AlertTriangle
@@ -459,15 +466,17 @@ export default function EPMSDashboard() {
             </div>
           )}
 
+          {activeNav === "diagrams" && <DiagramLibrary />}
+
           {activeNav === "employees" && canEditInstallerCode && (
             <div className="bg-white rounded-2xl border border-[#E5E7EB] p-6">
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
                   <h2 className="text-sm font-bold text-[#0F172A]">
-                    Employees & Installer Access
+                    Employees
                   </h2>
                   <p className="text-xs text-[#64748B] mt-1">
-                    Manage installer code access for the installation team.
+                    Manage employee and installer access.
                   </p>
                 </div>
               </div>
@@ -490,553 +499,560 @@ export default function EPMSDashboard() {
           {currentUser.role === "super_admin" &&
             activeNav === "instrument-master" && <InstrumentMaster />}
 
-          {!(
-            currentUser.role === "super_admin" &&
-            activeNav === "instrument-master"
-          ) && (
-            <div>
-              {/* ── KPI Cards ── */}
-              {activeNav !== "company" && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Total Panels */}
-                  <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-[#0EA5E9] flex items-center justify-center">
-                        <Zap size={16} className="text-white" />
+          {!showDedicatedPageOnly &&
+            !(
+              currentUser.role === "super_admin" &&
+              activeNav === "instrument-master"
+            ) && (
+              <div>
+                {/* ── KPI Cards ── */}
+                {activeNav !== "company" && (
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Total Panels */}
+                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="w-9 h-9 rounded-xl bg-[#0EA5E9] flex items-center justify-center">
+                          <Zap size={16} className="text-white" />
+                        </div>
+                        {isFree && (
+                          <span className="text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
+                            {panels.length}/3
+                          </span>
+                        )}
                       </div>
-                      {isFree && (
-                        <span className="text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
-                          {panels.length}/3
-                        </span>
-                      )}
+                      <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
+                        {panels.length}
+                      </p>
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5">
+                        Total Panels
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        {isFree
+                          ? `${3 - panels.length} slot${3 - panels.length !== 1 ? "s" : ""} remaining`
+                          : "All time"}
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
-                      {panels.length}
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      Total Panels
-                    </p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      {isFree
-                        ? `${3 - panels.length} slot${3 - panels.length !== 1 ? "s" : ""} remaining`
-                        : "All time"}
-                    </p>
-                  </div>
 
-                  {/* Installed */}
-                  <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
-                    <div className="w-9 h-9 rounded-xl bg-[#22C55E] flex items-center justify-center mb-3">
-                      <CheckCircle2 size={16} className="text-white" />
+                    {/* Installed */}
+                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
+                      <div className="w-9 h-9 rounded-xl bg-[#22C55E] flex items-center justify-center mb-3">
+                        <CheckCircle2 size={16} className="text-white" />
+                      </div>
+                      <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
+                        {installed}
+                      </p>
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5">
+                        Installed Panels
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        Successfully deployed
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
-                      {installed}
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      Installed Panels
-                    </p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      Successfully deployed
-                    </p>
-                  </div>
 
-                  {/* Pending */}
-                  <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
-                    <div className="w-9 h-9 rounded-xl bg-[#F59E0B] flex items-center justify-center mb-3">
-                      <Clock size={16} className="text-white" />
+                    {/* Pending */}
+                    <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
+                      <div className="w-9 h-9 rounded-xl bg-[#F59E0B] flex items-center justify-center mb-3">
+                        <Clock size={16} className="text-white" />
+                      </div>
+                      <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
+                        {pending}
+                      </p>
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5">
+                        Pending Panels
+                      </p>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        In progress or awaiting install
+                      </p>
                     </div>
-                    <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
-                      {pending}
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      Pending Panels
-                    </p>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
-                      In progress or awaiting install
-                    </p>
-                  </div>
 
-                  {/* Subscription */}
-                  <div
-                    className={`rounded-2xl border p-5 hover:shadow-md transition-shadow cursor-pointer ${
-                      isPremium
-                        ? "bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] border-[#0EA5E9]"
-                        : "bg-white border-[#E5E7EB]"
-                    }`}
-                    onClick={() => isFree && triggerUpgrade()}
-                  >
+                    {/* Subscription */}
                     <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${isPremium ? "bg-white/20" : "bg-[#F1F5F9]"}`}
-                    >
-                      <Crown
-                        size={16}
-                        className={isPremium ? "text-white" : "text-[#64748B]"}
-                      />
-                    </div>
-                    <p
-                      className={`text-2xl font-bold tracking-tight ${isPremium ? "text-white" : "text-[#0F172A]"}`}
-                    >
-                      {isPremium ? "PREMIUM" : "FREE"}
-                    </p>
-                    <p
-                      className={`text-xs font-medium mt-0.5 ${isPremium ? "text-white/90" : "text-[#0F172A]"}`}
-                    >
-                      Subscription Status
-                    </p>
-                    <p
-                      className={`text-[11px] mt-0.5 ${isPremium ? "text-white/70" : "text-[#0EA5E9] font-medium"}`}
-                    >
-                      {isPremium ? "Unlimited access" : "Tap to upgrade →"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── Quick Actions ── */}
-              {activeNav !== "company" && (
-                <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
-                  <h2 className="text-sm font-bold text-[#0F172A] mb-4">
-                    Quick Actions
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {/* Create Panel */}
-                    <button
-                      onClick={() => {
-                        window.history.pushState({}, "", "/panels/create");
-                        window.dispatchEvent(new PopStateEvent("popstate"));
-                      }}
-                      disabled={panelLimitReached}
-                      className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border transition-all text-sm font-medium ${
-                        panelLimitReached
-                          ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#CBD5E1] cursor-not-allowed"
-                          : "border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] text-[#0F172A]"
+                      className={`rounded-2xl border p-5 hover:shadow-md transition-shadow cursor-pointer ${
+                        isPremium
+                          ? "bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] border-[#0EA5E9]"
+                          : "bg-white border-[#E5E7EB]"
                       }`}
+                      onClick={() => isFree && triggerUpgrade()}
                     >
                       <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center ${panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#0EA5E9]"}`}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center mb-3 ${isPremium ? "bg-white/20" : "bg-[#F1F5F9]"}`}
                       >
-                        <Plus
-                          size={17}
+                        <Crown
+                          size={16}
                           className={
-                            panelLimitReached ? "text-[#CBD5E1]" : "text-white"
+                            isPremium ? "text-white" : "text-[#64748B]"
                           }
                         />
                       </div>
-                      <span>Create Panel</span>
-                      {panelLimitReached && (
-                        <span className="text-[10px] text-amber-500 font-medium">
-                          Limit reached
-                        </span>
-                      )}
-                    </button>
-
-                    {/* Search Panel */}
-                    <button
-                      onClick={() => setShowSearch(true)}
-                      className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A]"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-[#8B5CF6] flex items-center justify-center">
-                        <Search size={17} className="text-white" />
-                      </div>
-                      <span>Search Panel</span>
-                    </button>
-
-                    {/* Generate QR */}
-                    <button
-                      onClick={() => {
-                        if (isFree && panels.length === 0) return;
-                      }}
-                      className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A]"
-                    >
-                      <div className="w-9 h-9 rounded-xl bg-[#22C55E] flex items-center justify-center">
-                        <QrCode size={17} className="text-white" />
-                      </div>
-                      <span>Generate QR</span>
-                    </button>
-
-                    {/* Export PDF */}
-                    <button
-                      onClick={() => {
-                        if (isFree) {
-                          triggerUpgrade(
-                            "Export PDF with company branding requires a Premium subscription.",
-                          );
-                        }
-                      }}
-                      className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A] relative"
-                    >
-                      <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPremium ? "bg-[#F59E0B]" : "bg-[#F1F5F9]"}`}
+                      <p
+                        className={`text-2xl font-bold tracking-tight ${isPremium ? "text-white" : "text-[#0F172A]"}`}
                       >
-                        <FileText
-                          size={17}
-                          className={
-                            isPremium ? "text-white" : "text-[#94A3B8]"
-                          }
-                        />
-                      </div>
-                      <span className={isPremium ? "" : "text-[#94A3B8]"}>
-                        Export PDF
-                      </span>
-                      {isFree && (
-                        <span className="absolute top-2 right-2 w-4 h-4 bg-[#0EA5E9] rounded-full flex items-center justify-center">
-                          <Lock size={8} className="text-white" />
-                        </span>
-                      )}
-                    </button>
-                  </div>
-
-                  {/* Premium feature hints for free users */}
-                  {isFree && (
-                    <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex flex-wrap gap-2">
-                      <span className="text-xs text-[#94A3B8]">
-                        Premium unlocks:
-                      </span>
-                      {[
-                        "Upload Images",
-                        "Wiring Diagrams",
-                        "Spec PDFs",
-                        "Company Branding",
-                        "Premium Reports",
-                      ].map((f) => (
-                        <PremiumBadge
-                          key={f}
-                          label={f}
-                          onUpgrade={() =>
-                            triggerUpgrade(`${f} is a Premium feature.`)
-                          }
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ── Recent Panels Table ── */}
-              {activeNav !== "company" && (
-                <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
-                    <div>
-                      <h2 className="text-sm font-bold text-[#0F172A]">
-                        Recent Panels
-                      </h2>
-                      <p className="text-xs text-[#64748B] mt-0.5">
-                        {panels.length} panel{panels.length !== 1 ? "s" : ""} in
-                        your account
+                        {isPremium ? "PREMIUM" : "FREE"}
                       </p>
-                    </div>
-                    <div className="relative">
-                      <Search
-                        size={13}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Filter panels..."
-                        value={panelSearch}
-                        onChange={(e) => setPanelSearch(e.target.value)}
-                        className="pl-8 pr-3 py-1.5 text-xs border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] w-44 transition-all"
-                      />
+                      <p
+                        className={`text-xs font-medium mt-0.5 ${isPremium ? "text-white/90" : "text-[#0F172A]"}`}
+                      >
+                        Subscription Status
+                      </p>
+                      <p
+                        className={`text-[11px] mt-0.5 ${isPremium ? "text-white/70" : "text-[#0EA5E9] font-medium"}`}
+                      >
+                        {isPremium ? "Unlimited access" : "Tap to upgrade →"}
+                      </p>
                     </div>
                   </div>
+                )}
 
-                  {panels.length === 0 ? (
-                    <div className="text-center py-16 px-6">
-                      <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
-                        <Zap size={22} className="text-[#CBD5E1]" />
-                      </div>
-                      <p className="text-sm font-semibold text-[#0F172A]">
-                        No panels yet
-                      </p>
-                      <p className="text-xs text-[#64748B] mt-1 mb-4">
-                        Create your first panel to get started.
-                      </p>
+                {/* ── Quick Actions ── */}
+                {showDashboardOverview && (
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
+                    <h2 className="text-sm font-bold text-[#0F172A] mb-4">
+                      Quick Actions
+                    </h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {/* Create Panel */}
                       <button
                         onClick={() => {
                           window.history.pushState({}, "", "/panels/create");
                           window.dispatchEvent(new PopStateEvent("popstate"));
                         }}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0EA5E9] rounded-xl hover:bg-[#0284C7] transition-colors"
+                        disabled={panelLimitReached}
+                        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border transition-all text-sm font-medium ${
+                          panelLimitReached
+                            ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#CBD5E1] cursor-not-allowed"
+                            : "border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] text-[#0F172A]"
+                        }`}
                       >
-                        <Plus size={14} /> Create Panel
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#0EA5E9]"}`}
+                        >
+                          <Plus
+                            size={17}
+                            className={
+                              panelLimitReached
+                                ? "text-[#CBD5E1]"
+                                : "text-white"
+                            }
+                          />
+                        </div>
+                        <span>Create Panel</span>
+                        {panelLimitReached && (
+                          <span className="text-[10px] text-amber-500 font-medium">
+                            Limit reached
+                          </span>
+                        )}
+                      </button>
+
+                      {/* Search Panel */}
+                      <button
+                        onClick={() => setShowSearch(true)}
+                        className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A]"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-[#8B5CF6] flex items-center justify-center">
+                          <Search size={17} className="text-white" />
+                        </div>
+                        <span>Search Panel</span>
+                      </button>
+
+                      {/* Generate QR */}
+                      <button
+                        onClick={() => {
+                          if (isFree && panels.length === 0) return;
+                        }}
+                        className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A]"
+                      >
+                        <div className="w-9 h-9 rounded-xl bg-[#22C55E] flex items-center justify-center">
+                          <QrCode size={17} className="text-white" />
+                        </div>
+                        <span>Generate QR</span>
+                      </button>
+
+                      {/* Export PDF */}
+                      <button
+                        onClick={() => {
+                          if (isFree) {
+                            triggerUpgrade(
+                              "Export PDF with company branding requires a Premium subscription.",
+                            );
+                          }
+                        }}
+                        className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A] relative"
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPremium ? "bg-[#F59E0B]" : "bg-[#F1F5F9]"}`}
+                        >
+                          <FileText
+                            size={17}
+                            className={
+                              isPremium ? "text-white" : "text-[#94A3B8]"
+                            }
+                          />
+                        </div>
+                        <span className={isPremium ? "" : "text-[#94A3B8]"}>
+                          Export PDF
+                        </span>
+                        {isFree && (
+                          <span className="absolute top-2 right-2 w-4 h-4 bg-[#0EA5E9] rounded-full flex items-center justify-center">
+                            <Lock size={8} className="text-white" />
+                          </span>
+                        )}
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      {/* Table header */}
-                      <div className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px] gap-4 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E5E7EB] text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider">
-                        <span>Panel</span>
-                        <span>Customer</span>
-                        <span>Status</span>
-                        <span>Created</span>
-                        <span>Edit</span>
-                        <span>QR</span>
-                        <span>View</span>
-                        <span />
+
+                    {/* Premium feature hints for free users */}
+                    {isFree && (
+                      <div className="mt-4 pt-4 border-t border-[#F1F5F9] flex flex-wrap gap-2">
+                        <span className="text-xs text-[#94A3B8]">
+                          Premium unlocks:
+                        </span>
+                        {[
+                          "Upload Images",
+                          "Wiring Diagrams",
+                          "Spec PDFs",
+                          "Company Branding",
+                          "Premium Reports",
+                        ].map((f) => (
+                          <PremiumBadge
+                            key={f}
+                            label={f}
+                            onUpgrade={() =>
+                              triggerUpgrade(`${f} is a Premium feature.`)
+                            }
+                          />
+                        ))}
                       </div>
+                    )}
+                  </div>
+                )}
 
-                      {deleteSuccess && (
-                        <div className="col-span-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                          {deleteSuccess}
-                        </div>
-                      )}
-                      {deleteError && (
-                        <div className="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                          {deleteError}
-                        </div>
-                      )}
-                      {filteredPanels.length === 0 ? (
-                        <p className="text-xs text-[#94A3B8] text-center py-8">
-                          No panels match your filter.
+                {/* ── Recent Panels Table ── */}
+                {showDashboardOverview && (
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E7EB]">
+                      <div>
+                        <h2 className="text-sm font-bold text-[#0F172A]">
+                          Recent Panels
+                        </h2>
+                        <p className="text-xs text-[#64748B] mt-0.5">
+                          {panels.length} panel{panels.length !== 1 ? "s" : ""}{" "}
+                          in your account
                         </p>
-                      ) : (
-                        filteredPanels.map((panel) => (
-                          <div
-                            key={panel.id}
-                            className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
-                          >
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-[#0F172A] truncate">
-                                {panel.panelName || panel.name}
-                              </p>
-                              <p className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
-                                {panel.panelId || panel.id} ·{" "}
-                                {panel.installationLocation}
-                              </p>
-                            </div>
-                            <p className="text-xs text-[#64748B] truncate">
-                              {panel.customer}
-                            </p>
-                            <StatusBadge status={panel.status} />
-                            <p className="text-xs text-[#64748B]">
-                              {panel.createdAt}
-                            </p>
-                            <button
-                              onClick={() => {
-                                window.history.pushState(
-                                  {},
-                                  "",
-                                  `/panels/edit/${panel.panelId || panel.id}`,
-                                );
-                                window.dispatchEvent(
-                                  new PopStateEvent("popstate"),
-                                );
-                              }}
-                              className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                              title="Edit panel"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                setQrPanelId(panel.panelId || panel.id || null)
-                              }
-                              className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                              title="View QR code"
-                            >
-                              <QrCode size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                window.history.pushState(
-                                  {},
-                                  "",
-                                  `/panels/${panel.panelId || panel.id}`,
-                                );
-                                window.dispatchEvent(
-                                  new PopStateEvent("popstate"),
-                                );
-                              }}
-                              className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#64748B] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                              title="View panel"
-                            >
-                              <Eye size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedDeletePanel({
-                                  id: panel._id || panel.id || "",
-                                  name:
-                                    panel.panelName ||
-                                    panel.name ||
-                                    panel.panelId ||
-                                    "panel",
-                                });
-                                setDeleteError(null);
-                                setDeleteSuccess(null);
-                                setShowDeleteDialog(true);
-                              }}
-                              className="p-1.5 rounded-lg text-[#64748B] hover:text-[#DC2626] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                              title="Delete panel"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))
-                      )}
+                      </div>
+                      <div className="relative">
+                        <Search
+                          size={13}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Filter panels..."
+                          value={panelSearch}
+                          onChange={(e) => setPanelSearch(e.target.value)}
+                          className="pl-8 pr-3 py-1.5 text-xs border border-[#E5E7EB] rounded-lg bg-[#F8FAFC] text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] w-44 transition-all"
+                        />
+                      </div>
+                    </div>
 
-                      {/* Free plan add-more CTA */}
-                      {showDeleteDialog && selectedDeletePanel && (
-                        <Dialog
-                          open={showDeleteDialog}
-                          onOpenChange={setShowDeleteDialog}
+                    {panels.length === 0 ? (
+                      <div className="text-center py-16 px-6">
+                        <div className="w-12 h-12 rounded-2xl bg-[#F1F5F9] flex items-center justify-center mx-auto mb-3">
+                          <Zap size={22} className="text-[#CBD5E1]" />
+                        </div>
+                        <p className="text-sm font-semibold text-[#0F172A]">
+                          No panels yet
+                        </p>
+                        <p className="text-xs text-[#64748B] mt-1 mb-4">
+                          Create your first panel to get started.
+                        </p>
+                        <button
+                          onClick={() => {
+                            window.history.pushState({}, "", "/panels/create");
+                            window.dispatchEvent(new PopStateEvent("popstate"));
+                          }}
+                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0EA5E9] rounded-xl hover:bg-[#0284C7] transition-colors"
                         >
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete Panel?</DialogTitle>
-                              <DialogDescription>
-                                Are you sure you want to permanently delete this
-                                panel? This action cannot be undone.
-                              </DialogDescription>
-                            </DialogHeader>
+                          <Plus size={14} /> Create Panel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Table header */}
+                        <div className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px] gap-4 px-6 py-2.5 bg-[#F8FAFC] border-b border-[#E5E7EB] text-[10px] font-semibold text-[#94A3B8] uppercase tracking-wider">
+                          <span>Panel</span>
+                          <span>Customer</span>
+                          <span>Status</span>
+                          <span>Created</span>
+                          <span>Edit</span>
+                          <span>QR</span>
+                          <span>View</span>
+                          <span />
+                        </div>
 
-                            {deleteError && (
-                              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                                {deleteError}
+                        {deleteSuccess && (
+                          <div className="col-span-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                            {deleteSuccess}
+                          </div>
+                        )}
+                        {deleteError && (
+                          <div className="col-span-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {deleteError}
+                          </div>
+                        )}
+                        {filteredPanels.length === 0 ? (
+                          <p className="text-xs text-[#94A3B8] text-center py-8">
+                            No panels match your filter.
+                          </p>
+                        ) : (
+                          filteredPanels.map((panel) => (
+                            <div
+                              key={panel.id}
+                              className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-[#0F172A] truncate">
+                                  {panel.panelName || panel.name}
+                                </p>
+                                <p className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
+                                  {panel.panelId || panel.id} ·{" "}
+                                  {panel.installationLocation}
+                                </p>
                               </div>
-                            )}
-
-                            <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E5E7EB]">
-                              <p className="text-sm text-[#0F172A] font-semibold">
-                                {selectedDeletePanel.name}
+                              <p className="text-xs text-[#64748B] truncate">
+                                {panel.customer}
                               </p>
-                              <p className="text-xs text-[#64748B] mt-1">
-                                This panel will be removed permanently from your
-                                account.
+                              <StatusBadge status={panel.status} />
+                              <p className="text-xs text-[#64748B]">
+                                {panel.createdAt}
                               </p>
-                            </div>
-                            <DialogFooter>
                               <button
-                                type="button"
                                 onClick={() => {
-                                  setShowDeleteDialog(false);
-                                  setDeleteError(null);
+                                  window.history.pushState(
+                                    {},
+                                    "",
+                                    `/panels/edit/${panel.panelId || panel.id}`,
+                                  );
+                                  window.dispatchEvent(
+                                    new PopStateEvent("popstate"),
+                                  );
                                 }}
-                                className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                                title="Edit panel"
                               >
-                                Cancel
+                                <Edit3 size={14} />
                               </button>
                               <button
-                                type="button"
-                                onClick={async () => {
-                                  if (!selectedDeletePanel?.id) return;
-                                  setDeleting(true);
-                                  setDeleteError(null);
-                                  try {
-                                    await deletePanel(selectedDeletePanel.id);
-                                    removePanel(selectedDeletePanel.id);
-                                    setDeleteSuccess(
-                                      "Panel deleted successfully.",
-                                    );
-                                    setShowDeleteDialog(false);
-                                  } catch (error) {
-                                    setDeleteError(
-                                      error instanceof Error
-                                        ? error.message
-                                        : "Unable to delete panel.",
-                                    );
-                                  } finally {
-                                    setDeleting(false);
-                                  }
-                                }}
-                                className="inline-flex h-10 items-center justify-center rounded-xl bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
+                                onClick={() =>
+                                  setQrPanelId(
+                                    panel.panelId || panel.id || null,
+                                  )
+                                }
+                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                                title="View QR code"
                               >
-                                {deleting ? "Deleting..." : "Delete"}
+                                <QrCode size={14} />
                               </button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      )}
-                      {qrPanelId && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                          <div className="relative w-full max-w-3xl rounded-3xl bg-white border border-[#E5E7EB] shadow-2xl overflow-hidden">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
-                              <div>
-                                <p className="text-sm font-bold text-[#0F172A]">
-                                  Panel QR Code
-                                </p>
-                                <p className="text-xs text-[#64748B] mt-0.5">
-                                  View the QR code without leaving the panel
-                                  list.
-                                </p>
-                              </div>
                               <button
-                                onClick={() => setQrPanelId(null)}
-                                className="p-2 rounded-xl text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
-                                aria-label="Close QR code modal"
+                                onClick={() => {
+                                  window.history.pushState(
+                                    {},
+                                    "",
+                                    `/panels/${panel.panelId || panel.id}`,
+                                  );
+                                  window.dispatchEvent(
+                                    new PopStateEvent("popstate"),
+                                  );
+                                }}
+                                className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#64748B] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                                title="View panel"
                               >
-                                <X size={18} />
+                                <Eye size={14} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedDeletePanel({
+                                    id: panel._id || panel.id || "",
+                                    name:
+                                      panel.panelName ||
+                                      panel.name ||
+                                      panel.panelId ||
+                                      "panel",
+                                  });
+                                  setDeleteError(null);
+                                  setDeleteSuccess(null);
+                                  setShowDeleteDialog(true);
+                                }}
+                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#DC2626] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                                title="Delete panel"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
-                            <div className="p-6">
-                              {filteredPanels.find(
-                                (item) =>
-                                  item.panelId === qrPanelId ||
-                                  item.id === qrPanelId,
-                              ) ? (
-                                <PanelQRCode
-                                  panel={filteredPanels.find(
-                                    (item) =>
-                                      item.panelId === qrPanelId ||
-                                      item.id === qrPanelId,
-                                  )}
-                                  onBack={() => setQrPanelId(null)}
-                                />
-                              ) : (
-                                <div className="rounded-3xl border border-[#E5E7EB] p-10 text-center text-sm text-[#64748B]">
-                                  Panel data not available.
+                          ))
+                        )}
+
+                        {/* Free plan add-more CTA */}
+                        {showDeleteDialog && selectedDeletePanel && (
+                          <Dialog
+                            open={showDeleteDialog}
+                            onOpenChange={setShowDeleteDialog}
+                          >
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Delete Panel?</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to permanently delete
+                                  this panel? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+
+                              {deleteError && (
+                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                  {deleteError}
                                 </div>
                               )}
+
+                              <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E5E7EB]">
+                                <p className="text-sm text-[#0F172A] font-semibold">
+                                  {selectedDeletePanel.name}
+                                </p>
+                                <p className="text-xs text-[#64748B] mt-1">
+                                  This panel will be removed permanently from
+                                  your account.
+                                </p>
+                              </div>
+                              <DialogFooter>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowDeleteDialog(false);
+                                    setDeleteError(null);
+                                  }}
+                                  className="inline-flex h-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white px-4 text-sm font-semibold text-[#475569] hover:bg-[#F8FAFC] transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!selectedDeletePanel?.id) return;
+                                    setDeleting(true);
+                                    setDeleteError(null);
+                                    try {
+                                      await deletePanel(selectedDeletePanel.id);
+                                      removePanel(selectedDeletePanel.id);
+                                      setDeleteSuccess(
+                                        "Panel deleted successfully.",
+                                      );
+                                      setShowDeleteDialog(false);
+                                    } catch (error) {
+                                      setDeleteError(
+                                        error instanceof Error
+                                          ? error.message
+                                          : "Unable to delete panel.",
+                                      );
+                                    } finally {
+                                      setDeleting(false);
+                                    }
+                                  }}
+                                  className="inline-flex h-10 items-center justify-center rounded-xl bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 transition-colors"
+                                >
+                                  {deleting ? "Deleting..." : "Delete"}
+                                </button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        {qrPanelId && (
+                          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                            <div className="relative w-full max-w-3xl rounded-3xl bg-white border border-[#E5E7EB] shadow-2xl overflow-hidden">
+                              <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
+                                <div>
+                                  <p className="text-sm font-bold text-[#0F172A]">
+                                    Panel QR Code
+                                  </p>
+                                  <p className="text-xs text-[#64748B] mt-0.5">
+                                    View the QR code without leaving the panel
+                                    list.
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => setQrPanelId(null)}
+                                  className="p-2 rounded-xl text-[#64748B] hover:bg-[#F8FAFC] transition-colors"
+                                  aria-label="Close QR code modal"
+                                >
+                                  <X size={18} />
+                                </button>
+                              </div>
+                              <div className="p-6">
+                                {filteredPanels.find(
+                                  (item) =>
+                                    item.panelId === qrPanelId ||
+                                    item.id === qrPanelId,
+                                ) ? (
+                                  <PanelQRCode
+                                    panel={filteredPanels.find(
+                                      (item) =>
+                                        item.panelId === qrPanelId ||
+                                        item.id === qrPanelId,
+                                    )}
+                                    onBack={() => setQrPanelId(null)}
+                                  />
+                                ) : (
+                                  <div className="rounded-3xl border border-[#E5E7EB] p-10 text-center text-sm text-[#64748B]">
+                                    Panel data not available.
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                      {isFree && panels.length < 3 && (
-                        <div className="px-6 py-3 border-t border-[#F1F5F9] flex items-center justify-between bg-[#F8FAFC]">
-                          <span className="text-xs text-[#64748B]">
-                            {3 - panels.length} slot
-                            {3 - panels.length !== 1 ? "s" : ""} remaining on
-                            Free plan
-                          </span>
-                          <button
-                            onClick={() => {
-                              window.history.pushState(
-                                {},
-                                "",
-                                "/panels/create",
-                              );
-                              window.dispatchEvent(
-                                new PopStateEvent("popstate"),
-                              );
-                            }}
-                            className="text-xs text-[#0EA5E9] font-medium hover:underline flex items-center gap-1"
-                          >
-                            <Plus size={11} /> Add panel
-                          </button>
-                        </div>
-                      )}
-                      {panelLimitReached && (
-                        <div className="px-6 py-3 border-t border-[#F1F5F9] flex items-center justify-between">
-                          <span className="text-xs text-amber-700">
-                            Free plan limit reached (3/3 panels)
-                          </span>
-                          <button
-                            onClick={() =>
-                              triggerUpgrade(
-                                "Upgrade to create unlimited panels.",
-                              )
-                            }
-                            className="text-xs text-[#0EA5E9] font-semibold hover:underline flex items-center gap-1"
-                          >
-                            <ArrowUpRight size={11} /> Upgrade for unlimited
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                        )}
+                        {isFree && panels.length < 3 && (
+                          <div className="px-6 py-3 border-t border-[#F1F5F9] flex items-center justify-between bg-[#F8FAFC]">
+                            <span className="text-xs text-[#64748B]">
+                              {3 - panels.length} slot
+                              {3 - panels.length !== 1 ? "s" : ""} remaining on
+                              Free plan
+                            </span>
+                            <button
+                              onClick={() => {
+                                window.history.pushState(
+                                  {},
+                                  "",
+                                  "/panels/create",
+                                );
+                                window.dispatchEvent(
+                                  new PopStateEvent("popstate"),
+                                );
+                              }}
+                              className="text-xs text-[#0EA5E9] font-medium hover:underline flex items-center gap-1"
+                            >
+                              <Plus size={11} /> Add panel
+                            </button>
+                          </div>
+                        )}
+                        {panelLimitReached && (
+                          <div className="px-6 py-3 border-t border-[#F1F5F9] flex items-center justify-between">
+                            <span className="text-xs text-amber-700">
+                              Free plan limit reached (3/3 panels)
+                            </span>
+                            <button
+                              onClick={() =>
+                                triggerUpgrade(
+                                  "Upgrade to create unlimited panels.",
+                                )
+                              }
+                              className="text-xs text-[#0EA5E9] font-semibold hover:underline flex items-center gap-1"
+                            >
+                              <ArrowUpRight size={11} /> Upgrade for unlimited
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
         </main>
       </div>
 
