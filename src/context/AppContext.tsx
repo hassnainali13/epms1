@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import api, { getAuthErrorMessage } from "../lib/api";
 
@@ -160,6 +168,9 @@ export interface AppState {
   view: "login" | "dashboard" | "admin";
   users: User[];
   subscriptionPrice: number;
+  appLoading: boolean;
+  startLoading: () => void;
+  stopLoading: () => void;
   loginUser: (
     email: string,
     password: string,
@@ -197,6 +208,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [users, setUsers] = useState<User[]>([]);
   const [subscriptionPrice, setSubscriptionPriceState] = useState(49);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [appLoading, setAppLoading] = useState(false);
+  const loadingCountRef = useRef(0);
+
+  const startLoading = useCallback(() => {
+    loadingCountRef.current += 1;
+    setAppLoading(true);
+  }, []);
+
+  const stopLoading = useCallback(() => {
+    if (loadingCountRef.current > 0) {
+      loadingCountRef.current -= 1;
+    }
+    setAppLoading(loadingCountRef.current > 0);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("epms_token");
@@ -204,6 +229,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsAuthReady(true);
       return;
     }
+
+    startLoading();
+
     api
       .get("/auth/me")
       .then(async (res) => {
@@ -249,11 +277,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       })
       .finally(() => {
+        stopLoading();
         setIsAuthReady(true);
       });
   }, []);
 
   async function loginUser(email: string, password: string) {
+    startLoading();
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
@@ -287,10 +317,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getAuthErrorMessage(error) };
+    } finally {
+      stopLoading();
     }
   }
 
   async function loginAdmin(email: string, password: string) {
+    startLoading();
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, user } = response.data;
@@ -343,17 +376,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getAuthErrorMessage(error) };
+    } finally {
+      stopLoading();
     }
   }
 
   function logout() {
-    localStorage.removeItem("epms_token");
-    localStorage.removeItem("epms_refresh_token");
-    setCurrentUser(null);
-    setIsAdmin(false);
-    setView("login");
-    if (typeof window !== "undefined") {
-      window.history.pushState({}, "", "/");
+    startLoading();
+    try {
+      localStorage.removeItem("epms_token");
+      localStorage.removeItem("epms_refresh_token");
+      setCurrentUser(null);
+      setIsAdmin(false);
+      setView("login");
+      if (typeof window !== "undefined") {
+        window.history.pushState({}, "", "/");
+      }
+    } finally {
+      stopLoading();
     }
   }
 
@@ -364,6 +404,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     companyName?: string,
     companyLogoUrl?: string,
   ) {
+    startLoading();
     try {
       const response = await api.post("/auth/signup", {
         name,
@@ -393,6 +434,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     } catch (error) {
       return { ok: false, error: getAuthErrorMessage(error) };
+    } finally {
+      stopLoading();
     }
   }
 
@@ -501,6 +544,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       view,
       users,
       subscriptionPrice,
+      appLoading,
+      startLoading,
+      stopLoading,
       loginUser,
       loginAdmin,
       logout,
@@ -515,7 +561,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSubscriptionPrice,
       isAuthReady,
     }),
-    [currentUser, isAdmin, view, users, subscriptionPrice, isAuthReady],
+    [currentUser, isAdmin, view, users, subscriptionPrice, appLoading, isAuthReady],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

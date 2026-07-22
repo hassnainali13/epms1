@@ -34,7 +34,7 @@ export function useDashboardData() {
   };
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
 
     const loadCompany = async () => {
       try {
@@ -55,7 +55,7 @@ export function useDashboardData() {
 
     void loadPanels();
     void loadCompany();
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   const saveCompany = async (event: React.FormEvent) => {
     event.preventDefault();
