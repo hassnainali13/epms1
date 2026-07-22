@@ -58,6 +58,7 @@ type Tab =
   | "instruments"
   | "protection"
   | "images"
+  | "diagrams"
   | "documents"
   | "timeline";
 
@@ -357,6 +358,7 @@ const TABS: { id: Tab; label: string; icon: ElementType }[] = [
   { id: "instruments", label: "Instruments", icon: SlidersHorizontal },
   { id: "protection", label: "Protection", icon: Shield },
   { id: "images", label: "Images", icon: ImageIcon },
+  { id: "diagrams", label: "Diagrams", icon: FileText },
   { id: "documents", label: "Documents", icon: FileText },
   { id: "timeline", label: "Timeline", icon: Activity },
 ];
@@ -376,9 +378,9 @@ function OverviewSection({
         panel?.companyName ||
         (typeof panel?.company === "string"
           ? panel.company
-          : typeof panel?.company === "object"
-            ? panel.company?.name
-            : undefined) ||
+          : typeof panel?.company === "object" && panel.company !== null
+            ? String((panel.company as { name?: string }).name || "")
+            : "") ||
         currentUser?.companyName ||
         "—",
       color: "#0EA5E9",
@@ -965,6 +967,59 @@ function ImagesSection({
   );
 }
 
+function DiagramsSection({ panel }: { panel?: PanelRecord }) {
+  const diagrams = (panel?.diagrams || []).filter((diagram) => diagram?.url);
+
+  return (
+    <SectionCard>
+      <SectionHeader
+        icon={FileText}
+        title="Wiring Diagrams"
+        subtitle={`${diagrams.length} diagram${diagrams.length === 1 ? "" : "s"} attached to this panel`}
+        accent="#0EA5E9"
+      />
+      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {diagrams.length ? (
+          diagrams.map((diagram, index) => (
+            <div
+              key={`${diagram.name || "diagram"}-${index}`}
+              className="flex flex-col gap-3 rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] px-5 py-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#0F172A]">
+                    {diagram.name || `Wiring Diagram ${index + 1}`}
+                  </p>
+                  <p className="text-[11px] text-[#64748B] mt-1">
+                    {diagram.fileType || "Uploaded diagram"}
+                  </p>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
+                  {diagram.fileType || "File"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    window.open(diagram.url, "_blank", "noopener,noreferrer")
+                  }
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-[#0F172A] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F1F5F9] transition-colors"
+                >
+                  <Eye size={13} /> Open
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="md:col-span-2 rounded-2xl border border-dashed border-[#E5E7EB] bg-[#F8FAFC] p-8 text-center text-sm text-[#64748B]">
+            No wiring diagrams have been uploaded for this panel yet.
+          </div>
+        )}
+      </div>
+    </SectionCard>
+  );
+}
+
 function DocumentsSection({
   documents,
   onUpload,
@@ -1138,6 +1193,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
         motorConfiguration: panel.motorConfiguration || [],
         technicalSpecs: panel.technicalSpecs || {},
         images: panel.images || {},
+        diagrams: panel.diagrams || [],
         instrumentModels: panel.instrumentModels || {},
         documents: panel.documents || {},
       };
@@ -1245,6 +1301,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
         onDownloadAll={handleDownloadImages}
       />
     ),
+    diagrams: <DiagramsSection panel={panel || undefined} />,
     documents: (
       <DocumentsSection
         documents={documents}
@@ -1443,6 +1500,12 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
                   value: buildImageList(panel).length,
                   icon: ImageIcon,
                   color: "#F59E0B",
+                },
+                {
+                  label: "Diagrams",
+                  value: (panel.diagrams || []).length,
+                  icon: FileText,
+                  color: "#0EA5E9",
                 },
                 {
                   label: "Documents",

@@ -28,6 +28,14 @@ import { useApp } from "../context/AppContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface DiagramEntry {
+  name: string;
+  file: File | null;
+  existingUrl?: string;
+  fileType?: string;
+  publicId?: string;
+}
+
 interface FormData {
   // Step 1 — Basic Info
   panelName: string;
@@ -107,6 +115,7 @@ interface FormData {
   insideImage: File | null;
   namePlateImage: File | null;
   sideImage: File | null;
+  diagrams: DiagramEntry[];
 }
 
 const INITIAL: FormData = {
@@ -181,6 +190,7 @@ const INITIAL: FormData = {
   insideImage: null,
   namePlateImage: null,
   sideImage: null,
+  diagrams: [],
 };
 
 const PANEL_TYPES = [
@@ -226,6 +236,14 @@ const MOUNTING_TYPES = [
   "DIN Rail",
 ];
 const PANEL_COLORS = ["Blue", "Grey", "Black", "White", "Custom"];
+const DIAGRAM_NAME_OPTIONS = [
+  "Main Wiring Diagram",
+  "Control Wiring Diagram",
+  "Power Wiring Diagram",
+  "Interconnect Diagram",
+  "Terminal Layout",
+  "Panel Layout Diagram",
+];
 const ENCLOSURE_MATERIALS = [
   "CRCA",
   "Stainless Steel",
@@ -251,7 +269,8 @@ const BASE_STEPS = [
   { id: 2, label: "Technical Specs", icon: Cpu },
   { id: 3, label: "Instrument Models", icon: Zap },
   { id: 4, label: "Images", icon: Camera },
-  { id: 5, label: "Review", icon: Eye },
+  { id: 5, label: "Wiring Diagrams", icon: FileText },
+  { id: 6, label: "Review", icon: Eye },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -1136,6 +1155,7 @@ function Step3({
           icon={FileText}
         />
       </div>
+
       <div className="flex items-start gap-3 bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl px-4 py-3.5">
         <Info size={15} className="text-[#1DA1F2] flex-shrink-0 mt-0.5" />
         <div>
@@ -1147,6 +1167,169 @@ function Step3({
           </p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function DiagramsStep({
+  data,
+  set,
+}: {
+  data: FormData;
+  set: (k: keyof FormData, v: any) => void;
+}) {
+  const updateDiagram = (index: number, patch: Partial<DiagramEntry>) => {
+    const nextDiagrams = [...(data.diagrams || [])];
+    nextDiagrams[index] = { ...(nextDiagrams[index] || {}), ...patch };
+    set("diagrams", nextDiagrams);
+  };
+
+  const addDiagram = () => {
+    if ((data.diagrams || []).length >= 5) return;
+    set("diagrams", [
+      ...(data.diagrams || []),
+      { name: "", file: null, existingUrl: "" },
+    ]);
+  };
+
+  const removeDiagram = (index: number) => {
+    const nextDiagrams = [...(data.diagrams || [])];
+    nextDiagrams.splice(index, 1);
+    set("diagrams", nextDiagrams);
+  };
+
+  return (
+    <div className="space-y-8">
+      <SectionTitle
+        icon={FileText}
+        title="Wiring Diagrams"
+        subtitle="Optionally attach up to 5 wiring diagrams for this panel"
+      />
+      <div className="space-y-4">
+        {(data.diagrams || []).map((diagram, index) => {
+          const inputId = `diagram-${index}`;
+          const hasName = Boolean(diagram.name?.trim());
+          const previewUrl =
+            diagram.file && diagram.file.type.startsWith("image/")
+              ? URL.createObjectURL(diagram.file)
+              : diagram.existingUrl || "";
+          const isImagePreview = /\.(png|jpe?g|webp|gif|bmp)$/i.test(
+            previewUrl,
+          );
+
+          return (
+            <div
+              key={`${diagram.name || "diagram"}-${index}`}
+              className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1">
+                  <Label>Diagram {index + 1} Name</Label>
+                  <input
+                    list={inputId}
+                    value={diagram.name}
+                    onChange={(event) =>
+                      updateDiagram(index, { name: event.target.value })
+                    }
+                    placeholder="e.g. Main Wiring Diagram"
+                    className="w-full h-11 text-sm rounded-xl border border-[#E5E7EB] bg-white px-4 text-[#0F172A] outline-none focus:border-[#1DA1F2] focus:ring-3 focus:ring-[#1DA1F2]/10"
+                  />
+                  <datalist id={inputId}>
+                    {DIAGRAM_NAME_OPTIONS.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeDiagram(index)}
+                  className="h-10 w-10 rounded-xl border border-[#E5E7EB] bg-white text-[#64748B] hover:border-red-300 hover:text-red-500 transition-colors"
+                >
+                  <X size={15} className="mx-auto" />
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-dashed border-[#CBD5E1] bg-white p-3">
+                {hasName ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+                        <FileText size={15} className="text-[#1DA1F2]" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#0F172A]">
+                          {diagram.file?.name ||
+                            diagram.existingUrl ||
+                            "Upload diagram file"}
+                        </p>
+                        <p className="text-[11px] text-[#64748B] mt-0.5">
+                          {diagram.file
+                            ? `${(diagram.file.size / 1024).toFixed(1)} KB`
+                            : "Upload a PDF, image, or drawing file"}
+                        </p>
+                      </div>
+                    </div>
+                    <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-3 py-2 text-xs font-semibold text-[#1DA1F2] hover:bg-[#F0F9FF] transition-colors">
+                      <Upload size={12} />
+                      Upload
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.dwg,.dxf"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          updateDiagram(index, {
+                            file,
+                            fileType: file?.type || diagram.fileType || "",
+                          });
+                        }}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-3 text-center text-xs text-[#64748B]">
+                    Add a descriptive name first to enable uploads.
+                  </div>
+                )}
+              </div>
+
+              {previewUrl && (
+                <div className="mt-4 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
+                  {isImagePreview ? (
+                    <img
+                      src={previewUrl}
+                      alt={diagram.name || "Wiring diagram preview"}
+                      className="h-40 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-40 items-center justify-center bg-[#F8FAFC]">
+                      <div className="text-center">
+                        <FileText
+                          size={24}
+                          className="mx-auto text-[#94A3B8]"
+                        />
+                        <p className="mt-2 text-xs font-semibold text-[#475569]">
+                          {diagram.name || "Diagram file"}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {(data.diagrams || []).length < 5 && (
+        <button
+          type="button"
+          onClick={addDiagram}
+          className="mt-4 flex items-center gap-2 rounded-xl border border-dashed border-[#1DA1F2] bg-[#F0F9FF] px-4 py-2.5 text-sm font-semibold text-[#1DA1F2] hover:bg-[#E0F2FE] transition-colors"
+        >
+          <Upload size={14} /> Add another diagram
+        </button>
+      )}
     </div>
   );
 }
@@ -1606,6 +1789,7 @@ function Step4({
     { label: "Name Plate Image", file: data.namePlateImage },
     { label: "Side Image", file: data.sideImage },
   ];
+  const diagramEntries = (data.diagrams || []).filter(Boolean);
 
   const technicalRows = [
     { label: "Voltage", value: data.voltage ? `${data.voltage} V` : "" },
@@ -1835,6 +2019,32 @@ function Step4({
             );
           })}
         </div>
+      </ReviewSection>
+
+      <ReviewSection title="Wiring Diagrams" icon={FileText}>
+        {diagramEntries.length ? (
+          <div className="space-y-3 py-3">
+            {diagramEntries.map((diagram, index) => (
+              <div
+                key={`${diagram.name || "diagram"}-${index}`}
+                className="rounded-xl border border-[#E5E7EB] bg-white p-3"
+              >
+                <p className="text-[11px] font-semibold text-[#0F172A]">
+                  {diagram.name || `Diagram ${index + 1}`}
+                </p>
+                <p className="text-[10px] text-[#64748B] mt-1">
+                  {diagram.file?.name || "Uploaded diagram file"}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-3">
+            <p className="text-xs text-[#64748B]">
+              No wiring diagrams were attached.
+            </p>
+          </div>
+        )}
       </ReviewSection>
     </div>
   );
@@ -2103,6 +2313,12 @@ export default function CreatePanelWizard({
           insideImage: null,
           namePlateImage: null,
           sideImage: null,
+          diagrams: (panel.diagrams || []).map((diagram: any) => ({
+            name: diagram.name || "",
+            file: null,
+            existingUrl: diagram.url || "",
+            fileType: diagram.fileType || "",
+          })),
         };
 
         if (
@@ -2247,7 +2463,7 @@ export default function CreatePanelWizard({
       }
     }
 
-    if (!isEditMode && step === visibleSteps.length - 1) {
+    if (!isEditMode && step === visibleSteps.length) {
       try {
         await generateReviewPanelId();
       } catch (error) {
@@ -2285,6 +2501,19 @@ export default function CreatePanelWizard({
         return response.data.url as string;
       };
 
+      const uploadDiagram = async (entry: DiagramEntry | null | undefined) => {
+        if (!entry?.file) return null;
+        const formData = new FormData();
+        formData.append("file", entry.file);
+        const response = await api.post("/uploads/image", formData);
+        return {
+          name: entry.name?.trim() || "Wiring Diagram",
+          url: response.data.url as string,
+          publicId: response.data.publicId || "",
+          fileType: entry.fileType || entry.file.type || "",
+        };
+      };
+
       const [frontImage, insideImage, namePlateImage, sideImage] =
         await Promise.all([
           uploadImage(data.frontImage),
@@ -2292,6 +2521,29 @@ export default function CreatePanelWizard({
           uploadImage(data.namePlateImage),
           uploadImage(data.sideImage),
         ]);
+
+      const diagramUploads = await Promise.all(
+        (data.diagrams || []).map((entry) => uploadDiagram(entry)),
+      );
+      const diagramPayload = (data.diagrams || [])
+        .map((entry, index) => {
+          if (entry.file) {
+            return diagramUploads[index];
+          }
+          if (entry.existingUrl) {
+            const existingDiagram = entry as DiagramEntry & {
+              publicId?: string;
+            };
+            return {
+              name: entry.name?.trim() || "Wiring Diagram",
+              url: entry.existingUrl,
+              publicId: existingDiagram.publicId || "",
+              fileType: entry.fileType || "",
+            };
+          }
+          return null;
+        })
+        .filter(Boolean);
 
       const imagePayload: Record<string, string> = {
         ...(existingImages.frontImage
@@ -2419,6 +2671,7 @@ export default function CreatePanelWizard({
           revision: data.revision,
         },
         images: imagePayload,
+        diagrams: diagramPayload,
         instrumentModels: isPremium ? buildInstrumentModelPayload() : {},
         // include panelId if generated on review to ensure backend uses same id
         ...(generatedPanelId ? { panelId: generatedPanelId } : {}),
@@ -2623,8 +2876,10 @@ export default function CreatePanelWizard({
                     ? "Assign instrument models based on the Technical Specifications."
                     : "Upgrade to Premium to unlock instrument model selection and documentation tools.")}
                 {step === 4 &&
-                  "Upload photos and technical documents for identification and reference."}
+                  "Upload photos and reference images for identification and documentation."}
                 {step === 5 &&
+                  "Attach optional wiring diagrams and supporting drawings for this panel."}
+                {step === 6 &&
                   (isEditMode
                     ? "Review all information before saving your changes."
                     : "Review all information before creating the panel in the system.")}
@@ -2656,7 +2911,8 @@ export default function CreatePanelWizard({
             )}
             {step === 3 && !isPremium && <PremiumUpgradeCard />}
             {step === 4 && <Step3 data={data} set={set} />}
-            {step === 5 && (
+            {step === 5 && <DiagramsStep data={data} set={set} />}
+            {step === 6 && (
               <Step4 data={data} panelId={panelId} selections={selections} />
             )}
           </div>

@@ -67,6 +67,13 @@ export interface PanelImages {
   sideImage?: string;
 }
 
+export interface PanelDiagram {
+  name?: string;
+  url?: string;
+  publicId?: string;
+  fileType?: string;
+}
+
 export interface PanelDocuments {
   specificationPdf?: string;
   testReport?: string;
@@ -125,6 +132,7 @@ export interface Panel {
   qrGenerated?: boolean;
   technicalSpecs?: PanelTechnicalSpecs;
   images?: PanelImages;
+  diagrams?: PanelDiagram[];
   instrumentModels?: Record<string, string[]>;
   documents?: PanelDocuments;
   maintenance?: PanelMaintenance;
