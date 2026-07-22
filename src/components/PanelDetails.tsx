@@ -8,8 +8,6 @@
 import {
   ArrowLeft,
   Download,
-  FileSpreadsheet,
-  Copy,
   Trash2,
   Building2,
   UserCheck,
@@ -32,8 +30,6 @@ import {
   Eye,
   ZoomIn,
   X,
-  Printer,
-  MoreHorizontal,
   CalendarDays,
   Tag,
   Radio,
@@ -1118,7 +1114,6 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
   const { currentUser, startLoading, stopLoading } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [panel, setPanel] = useState<PanelRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1176,41 +1171,6 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to delete panel.");
-    }
-  };
-
-  const handleDuplicate = async () => {
-    if (!panel) return;
-    try {
-      const payload = {
-        panelName: `${panel.panelName || panel.name || "Panel"} Copy`,
-        panelType: panel.panelType || panel.type || "MCC",
-        manufacturingDate: panel.manufacturingDate || panel.createdAt || "",
-        installationDate: panel.installationDate || "",
-        customer: panel.customer || "",
-        installer: panel.installer || "",
-        manufacturer: panel.manufacturer || "",
-        installationLocation: panel.installationLocation || "",
-        projectName: panel.projectName || "",
-        description: panel.description || "",
-        status: "Draft",
-        motorConfiguration: panel.motorConfiguration || [],
-        technicalSpecs: panel.technicalSpecs || {},
-        images: panel.images || {},
-        diagrams: panel.diagrams || [],
-        instrumentModels: panel.instrumentModels || {},
-        documents: panel.documents || {},
-      };
-      const res = await api.post("/panels", payload);
-      const createdId = res.data.panel?.panelId || res.data.panel?._id;
-      if (createdId) {
-        window.history.pushState({}, "", `/panels/${createdId}`);
-        window.location.reload();
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Unable to duplicate panel.",
-      );
     }
   };
 
@@ -1379,95 +1339,6 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
                     <MapPin size={11} className="text-[#94A3B8]" />{" "}
                     {getDisplayValue(panel.installationLocation)}
                   </div>
-                </div>
-              </div>
-
-              <div className="hidden sm:flex flex-wrap items-center gap-2 justify-end lg:justify-end">
-                <button
-                  onClick={() => {
-                    const rows = [
-                      ["Panel ID", panel.panelId || panel.id || ""],
-                      ["Panel Name", panel.panelName || panel.name || ""],
-                      ["Panel Type", panel.panelType || panel.type || ""],
-                      ["Status", panel.status || ""],
-                      ["Customer", panel.customer || ""],
-                      ["Project", panel.projectName || ""],
-                      ["Location", panel.installationLocation || ""],
-                    ];
-                    const csv = rows.map((row) => row.join(",")).join("\n");
-                    const blob = new Blob([csv], {
-                      type: "text/csv;charset=utf-8;",
-                    });
-                    const anchor = document.createElement("a");
-                    anchor.href = URL.createObjectURL(blob);
-                    anchor.download = `${panel.panelId || panel.id || "panel"}.csv`;
-                    anchor.click();
-                    URL.revokeObjectURL(anchor.href);
-                  }}
-                  className="flex items-center gap-2 h-9 px-4 text-xs font-semibold text-[#475569] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all"
-                >
-                  <FileSpreadsheet size={13} /> Excel
-                </button>
-                <button
-                  onClick={() => window.print()}
-                  className="flex items-center gap-2 h-9 px-4 text-xs font-semibold text-[#475569] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all"
-                >
-                  <Download size={13} /> PDF
-                </button>
-                <button
-                  onClick={handleDuplicate}
-                  className="flex items-center gap-2 h-9 px-4 text-xs font-semibold text-[#475569] bg-white border border-[#E5E7EB] rounded-xl hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all"
-                >
-                  <Copy size={13} /> Duplicate
-                </button>
-                <div className="relative">
-                  <button
-                    onClick={() => setMoreOpen(!moreOpen)}
-                    className="w-9 h-9 flex items-center justify-center text-[#64748B] border border-[#E5E7EB] bg-white rounded-xl hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <MoreHorizontal size={16} />
-                  </button>
-                  {moreOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setMoreOpen(false)}
-                      />
-                      <div className="absolute right-0 top-11 z-50 w-44 bg-white border border-[#E5E7EB] rounded-xl shadow-xl py-1.5">
-                        <button
-                          onClick={() => window.print()}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                        >
-                          <Printer size={13} className="text-[#64748B]" /> Print
-                          Panel
-                        </button>
-                        <button
-                          onClick={() =>
-                            panel?.qrUrl &&
-                            window.open(
-                              panel.qrUrl,
-                              "_blank",
-                              "noopener,noreferrer",
-                            )
-                          }
-                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                        >
-                          <RefreshCw size={13} className="text-[#64748B]" />{" "}
-                          Open QR Link
-                        </button>
-                        <div className="border-t border-[#F1F5F9] my-1" />
-                        <button
-                          onClick={() => {
-                            setMoreOpen(false);
-                            setShowDeleteConfirm(true);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 size={13} /> Delete Panel
-                        </button>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </div>

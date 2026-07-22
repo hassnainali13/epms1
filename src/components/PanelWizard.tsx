@@ -886,10 +886,9 @@ function Step2({
               onChange={setMotorCount}
               placeholder="0"
               icon={Factory}
-              type="number"
-              min="0"
-              step="1"
+              type="text"
               inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
           {data.motorConfiguration?.map((motor, index) => (
@@ -926,10 +925,9 @@ function Step2({
                     }
                     placeholder="0"
                     icon={Zap}
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                   />
                 </div>
                 <div>
@@ -941,10 +939,9 @@ function Step2({
                     }
                     placeholder="0"
                     icon={Zap}
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                   />
                 </div>
               </div>
@@ -972,10 +969,9 @@ function Step2({
                     onChange={(v) => setInstrumentCategoryQuantity(category, v)}
                     placeholder="0"
                     icon={Package}
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
                     inputMode="numeric"
+                    pattern="[0-9]*"
                   />
                 </div>
               ))}
@@ -2283,6 +2279,12 @@ export default function CreatePanelWizard({
   const visibleSteps = BASE_STEPS;
   const [step, setStep] = useState(1);
   const [data, setData] = useState<FormData>(INITIAL);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [step]);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);

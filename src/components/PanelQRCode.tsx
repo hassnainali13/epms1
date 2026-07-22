@@ -1,20 +1,13 @@
-import { ArrowLeft, Download, Info, Printer, QrCode, Zap } from "lucide-react";
+import { ArrowLeft, Download, Info, Printer, QrCode } from "lucide-react";
 import { jsPDF } from "jspdf";
 import { useRef } from "react";
 import { useApp } from "../context/AppContext";
 import type { Panel } from "../context/AppContext";
-import stickerSafetyFirst from "../../assets/sticker-safetyfirst.PNG";
 
-function formatDateValue(value?: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+const stickerSafetyFirst = new URL(
+  "../../assets/sticker-safetyfirst.PNG",
+  import.meta.url,
+).href;
 
 export default function PanelQRCode({
   panel,
@@ -399,9 +392,11 @@ export default function PanelQRCode({
                 </div>
               )}
             </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-xl bg-[#0EA5E9] flex items-center justify-center shadow-lg">
-                <Zap size={18} className="text-white" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#16A34A] to-[#2563EB] flex items-center justify-center shadow-lg">
+                <span className="text-[10px] font-bold tracking-[0.22em] text-white">
+                  EPMS
+                </span>
               </div>
             </div>
           </div>

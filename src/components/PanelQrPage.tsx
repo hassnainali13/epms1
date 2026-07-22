@@ -27,6 +27,31 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     !hasInstallationDetails && panel?.status !== "Installed",
   );
 
+  const companyDisplayName = panel
+    ? panel.companyName ||
+      (typeof panel.company === "object"
+        ? panel.company?.name
+        : panel.company) ||
+      "—"
+    : "—";
+
+  const companyLogoSrc =
+    panel?.companyLogoUrl ||
+    (typeof panel?.company === "object" ? panel.company?.logoUrl : undefined) ||
+    undefined;
+
+  const qrPayload =
+    panel?.qrUrl ||
+    (typeof window !== "undefined" && panel?.panelId
+      ? `${window.location.origin}/panel/${panel.panelId}`
+      : null);
+
+  const qrImageSrc = qrPayload
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
+        qrPayload,
+      )}`
+    : null;
+
   useEffect(() => {
     const getPanel = async () => {
       try {
@@ -151,7 +176,41 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
             <div className="rounded-2xl border border-[#E5E7EB] p-4">
               <p className="text-xs text-[#64748B]">Company</p>
               <p className="mt-2 text-sm font-semibold text-[#0F172A]">
-                {panel.companyName || panel.company || "—"}
+                {companyDisplayName}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-[#E5E7EB] p-5 bg-[#F8FAFC] flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="w-56 h-56 bg-white border-2 border-[#0F172A] rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-center">
+                {qrImageSrc ? (
+                  <img
+                    src={qrImageSrc}
+                    alt="Panel QR Code"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="text-center text-xs text-[#64748B]">
+                    QR not available
+                  </div>
+                )}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#16A34A] to-[#2563EB] flex items-center justify-center shadow-lg">
+                  <span className="text-[10px] font-bold tracking-[0.22em] text-white">
+                    EPMS
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-[#0F172A]">
+                {panel.panelName || panel.panelId}
+              </p>
+              <p className="text-xs text-[#64748B] mt-1">
+                Scan to access panel details instantly
               </p>
             </div>
           </div>

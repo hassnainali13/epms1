@@ -127,6 +127,8 @@ export interface Panel {
   projectName?: string;
   description?: string;
   companyName?: string;
+  company?: string | { name?: string; logoUrl?: string };
+  companyLogoUrl?: string;
   createdByName?: string;
   qrUrl?: string;
   status:
@@ -252,7 +254,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setCurrentUser(mappedUser);
         setView(user.role === "super_admin" ? "admin" : "dashboard");
         setIsAdmin(user.role === "super_admin");
-        if (user.role !== "super_admin") {
+
+        if (user.role === "super_admin") {
+          const overview = await api.get("/admin/overview");
+          const nextUsers = (overview.data.users || []).map((entry: any) => ({
+            id: entry._id || entry.id,
+            ...entry,
+            name: entry.name,
+            email: entry.email,
+            plan: entry.plan || "FREE",
+            blocked: Boolean(entry.blocked),
+            joinedAt: entry.createdAt
+              ? new Date(entry.createdAt).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0],
+            panels: Array.isArray(entry.panels) ? entry.panels : [],
+            monthlySpend: Number(entry.monthlySpend || 0),
+          }));
+          setUsers(nextUsers);
+          setSubscriptionPriceState(overview.data.subscriptionPrice || 49);
+        } else {
           const panelsRes = await api.get("/panels");
           const panels = (panelsRes.data.panels || []).map((panel: any) => ({
             ...panel,
