@@ -1260,7 +1260,7 @@ function DiagramsStep({
 
           return (
             <div
-              key={`${diagram.name || "diagram"}-${index}`}
+              key={`diagram-${index}`}
               className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4"
             >
               <div className="flex items-start justify-between gap-3">
