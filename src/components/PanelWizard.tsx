@@ -38,7 +38,7 @@ interface DiagramEntry {
   libraryId?: string;
 }
 
-interface FormData {
+export interface FormData {
   // Step 1 — Basic Info
   panelName: string;
   panelType: string;
@@ -671,10 +671,12 @@ function Step2({
   data,
   set,
   instrumentCategories,
+  isPremium,
 }: {
   data: FormData;
   set: (k: keyof FormData, v: any) => void;
   instrumentCategories: string[];
+  isPremium: boolean;
 }) {
   const toggle = (key: keyof FormData) => {
     set(key, !data[key]);
@@ -786,87 +788,92 @@ function Step2({
               icon={Cpu}
             />
           </div>
-          <div>
-            <Label>Control Voltage</Label>
-            <Input
-              value={data.controlVoltage}
-              onChange={(v) => set("controlVoltage", v)}
-              placeholder="e.g. 24V DC"
-              icon={Zap}
-            />
-          </div>
-          <div>
-            <Label>IP Rating</Label>
-            <Select
-              value={data.ipRating}
-              onChange={(v) => set("ipRating", v)}
-              options={IP_RATINGS}
-              placeholder="Select IP rating"
-            />
-          </div>
-          <div>
-            <Label>Enclosure Material</Label>
-            <Select
-              value={data.enclosureMaterial}
-              onChange={(v) => set("enclosureMaterial", v)}
-              options={ENCLOSURE_MATERIALS}
-              placeholder="Select material"
-            />
-          </div>
-          <div>
-            <Label>Panel Color</Label>
-            <Select
-              value={data.panelColor}
-              onChange={(v) => set("panelColor", v)}
-              options={PANEL_COLORS}
-              placeholder="Select color"
-            />
-          </div>
-          <div>
-            <Label>Dimensions (L × W × H mm)</Label>
-            <Input
-              value={data.dimensions}
-              onChange={(v) => set("dimensions", v)}
-              placeholder="e.g. 2000 × 800 × 600"
-              icon={Package}
-            />
-          </div>
-          <div>
-            <Label>Weight (kg)</Label>
-            <Input
-              value={data.weight}
-              onChange={(v) => set("weight", v)}
-              placeholder="e.g. 185"
-              icon={Package}
-            />
-          </div>
-          <div>
-            <Label>Mounting Type</Label>
-            <Select
-              value={data.mountingType}
-              onChange={(v) => set("mountingType", v)}
-              options={MOUNTING_TYPES}
-              placeholder="Select mounting"
-            />
-          </div>
-          <div>
-            <Label>Cable Size</Label>
-            <Input
-              value={data.cableSize}
-              onChange={(v) => set("cableSize", v)}
-              placeholder="e.g. 3x70 mm²"
-              icon={FileText}
-            />
-          </div>
-          <div>
-            <Label>Control Cable Size</Label>
-            <Input
-              value={data.controlCableSize}
-              onChange={(v) => set("controlCableSize", v)}
-              placeholder="e.g. 2x2.5 mm²"
-              icon={FileText}
-            />
-          </div>
+
+          {isPremium && (
+            <>
+              <div>
+                <Label>Control Voltage</Label>
+                <Input
+                  value={data.controlVoltage}
+                  onChange={(v) => set("controlVoltage", v)}
+                  placeholder="e.g. 24V DC"
+                  icon={Zap}
+                />
+              </div>
+              <div>
+                <Label>IP Rating</Label>
+                <Select
+                  value={data.ipRating}
+                  onChange={(v) => set("ipRating", v)}
+                  options={IP_RATINGS}
+                  placeholder="Select IP rating"
+                />
+              </div>
+              <div>
+                <Label>Enclosure Material</Label>
+                <Select
+                  value={data.enclosureMaterial}
+                  onChange={(v) => set("enclosureMaterial", v)}
+                  options={ENCLOSURE_MATERIALS}
+                  placeholder="Select material"
+                />
+              </div>
+              <div>
+                <Label>Panel Color</Label>
+                <Select
+                  value={data.panelColor}
+                  onChange={(v) => set("panelColor", v)}
+                  options={PANEL_COLORS}
+                  placeholder="Select color"
+                />
+              </div>
+              <div>
+                <Label>Dimensions (L × W × H mm)</Label>
+                <Input
+                  value={data.dimensions}
+                  onChange={(v) => set("dimensions", v)}
+                  placeholder="e.g. 2000 × 800 × 600"
+                  icon={Package}
+                />
+              </div>
+              <div>
+                <Label>Weight (kg)</Label>
+                <Input
+                  value={data.weight}
+                  onChange={(v) => set("weight", v)}
+                  placeholder="e.g. 185"
+                  icon={Package}
+                />
+              </div>
+              <div>
+                <Label>Mounting Type</Label>
+                <Select
+                  value={data.mountingType}
+                  onChange={(v) => set("mountingType", v)}
+                  options={MOUNTING_TYPES}
+                  placeholder="Select mounting"
+                />
+              </div>
+              <div>
+                <Label>Cable Size</Label>
+                <Input
+                  value={data.cableSize}
+                  onChange={(v) => set("cableSize", v)}
+                  placeholder="e.g. 3x70 mm²"
+                  icon={FileText}
+                />
+              </div>
+              <div>
+                <Label>Control Cable Size</Label>
+                <Input
+                  value={data.controlCableSize}
+                  onChange={(v) => set("controlCableSize", v)}
+                  placeholder="e.g. 2x2.5 mm²"
+                  icon={FileText}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -888,69 +895,68 @@ function Step2({
               icon={Factory}
               type="text"
               inputMode="numeric"
-              pattern="[0-9]*"
             />
           </div>
-          {data.motorConfiguration?.map((motor, index) => (
-            <div
-              key={`motor-${index}`}
-              className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4 shadow-sm"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-full bg-[#E0F2FE] text-[#0369A1] flex items-center justify-center text-xs font-semibold">
-                  {index + 1}
+
+          {isPremium &&
+            data.motorConfiguration?.map((motor, index) => (
+              <div
+                key={`motor-${index}`}
+                className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-4 shadow-sm"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-7 h-7 rounded-full bg-[#E0F2FE] text-[#0369A1] flex items-center justify-center text-xs font-semibold">
+                    {index + 1}
+                  </div>
+                  <p className="text-sm font-semibold text-[#0F172A]">
+                    Motor {index + 1}
+                  </p>
                 </div>
-                <p className="text-sm font-semibold text-[#0F172A]">
-                  Motor {index + 1}
-                </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Connection Type</Label>
+                    <Select
+                      value={motor.connectionType || "DOL"}
+                      onChange={(value) =>
+                        updateMotorConfiguration(index, "connectionType", value)
+                      }
+                      options={MOTOR_CONNECTION_TYPES}
+                      placeholder="Select connection type"
+                    />
+                  </div>
+                  <div>
+                    <Label>Minimum HP</Label>
+                    <Input
+                      value={motor.minHp || "0"}
+                      onChange={(value) =>
+                        updateMotorConfiguration(index, "minHp", value)
+                      }
+                      placeholder="0"
+                      icon={Zap}
+                      type="text"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div>
+                    <Label>Maximum HP</Label>
+                    <Input
+                      value={motor.maxHp || "0"}
+                      onChange={(value) =>
+                        updateMotorConfiguration(index, "maxHp", value)
+                      }
+                      placeholder="0"
+                      icon={Zap}
+                      type="text"
+                      inputMode="numeric"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div>
-                  <Label>Connection Type</Label>
-                  <Select
-                    value={motor.connectionType || "DOL"}
-                    onChange={(value) =>
-                      updateMotorConfiguration(index, "connectionType", value)
-                    }
-                    options={MOTOR_CONNECTION_TYPES}
-                    placeholder="Select connection type"
-                  />
-                </div>
-                <div>
-                  <Label>Minimum HP</Label>
-                  <Input
-                    value={motor.minHp || "0"}
-                    onChange={(value) =>
-                      updateMotorConfiguration(index, "minHp", value)
-                    }
-                    placeholder="0"
-                    icon={Zap}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                  />
-                </div>
-                <div>
-                  <Label>Maximum HP</Label>
-                  <Input
-                    value={motor.maxHp || "0"}
-                    onChange={(value) =>
-                      updateMotorConfiguration(index, "maxHp", value)
-                    }
-                    placeholder="0"
-                    icon={Zap}
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
 
-      {instrumentCategories.length > 0 && (
+      {isPremium && instrumentCategories.length > 0 && (
         <>
           <div className="border-t border-[#F1F5F9]" />
 
@@ -971,7 +977,6 @@ function Step2({
                     icon={Package}
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]*"
                   />
                 </div>
               ))}
@@ -1108,60 +1113,95 @@ function ImageUploadZone({
 function Step3({
   data,
   set,
+  isPremium,
 }: {
   data: FormData;
   set: (k: keyof FormData, v: any) => void;
+  isPremium: boolean;
 }) {
+  const imageFields = isPremium
+    ? [
+        {
+          label: "Front Image",
+          hint: "JPG, PNG, WEBP · Max 10MB",
+          file: data.frontImage,
+          onFile: (f: File | null) => set("frontImage", f),
+          accept: "image/*",
+          icon: Camera,
+        },
+        {
+          label: "Inside Image",
+          hint: "JPG, PNG, WEBP · Max 10MB",
+          file: data.insideImage,
+          onFile: (f: File | null) => set("insideImage", f),
+          accept: "image/*",
+          icon: Camera,
+        },
+        {
+          label: "Name Plate Image",
+          hint: "JPG, PNG, WEBP · Max 10MB",
+          file: data.namePlateImage,
+          onFile: (f: File | null) => set("namePlateImage", f),
+          accept: "image/*",
+          icon: FileText,
+        },
+        {
+          label: "Side Image",
+          hint: "JPG, PNG, WEBP · Max 10MB",
+          file: data.sideImage,
+          onFile: (f: File | null) => set("sideImage", f),
+          accept: "image/*",
+          icon: FileText,
+        },
+      ]
+    : [
+        {
+          label: "Front Image",
+          hint: "JPG, PNG, WEBP · Max 10MB",
+          file: data.frontImage,
+          onFile: (f: File | null) => set("frontImage", f),
+          accept: "image/*",
+          icon: Camera,
+        },
+      ];
+
   return (
     <div className="space-y-8">
       <SectionTitle
         icon={Camera}
         title="Panel Images"
-        subtitle="Upload photos for this panel"
+        subtitle={
+          isPremium
+            ? "Upload photos for this panel"
+            : "Free plan allows one front image upload"
+        }
       />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <ImageUploadZone
-          label="Front Image"
-          hint="JPG, PNG, WEBP · Max 10MB"
-          file={data.frontImage}
-          onFile={(f) => set("frontImage", f)}
-          accept="image/*"
-          icon={Camera}
-        />
-        <ImageUploadZone
-          label="Inside Image"
-          hint="JPG, PNG, WEBP · Max 10MB"
-          file={data.insideImage}
-          onFile={(f) => set("insideImage", f)}
-          accept="image/*"
-          icon={Camera}
-        />
-        <ImageUploadZone
-          label="Name Plate Image"
-          hint="JPG, PNG, WEBP · Max 10MB"
-          file={data.namePlateImage}
-          onFile={(f) => set("namePlateImage", f)}
-          accept="image/*"
-          icon={FileText}
-        />
-        <ImageUploadZone
-          label="Side Image"
-          hint="JPG, PNG, WEBP · Max 10MB"
-          file={data.sideImage}
-          onFile={(f) => set("sideImage", f)}
-          accept="image/*"
-          icon={FileText}
-        />
+        {imageFields.map((field) => (
+          <ImageUploadZone
+            key={field.label}
+            label={field.label}
+            hint={field.hint}
+            file={field.file}
+            onFile={field.onFile}
+            accept={field.accept}
+            icon={field.icon}
+          />
+        ))}
       </div>
 
       <div className="flex items-start gap-3 bg-[#F0F9FF] border border-[#BAE6FD] rounded-xl px-4 py-3.5">
         <Info size={15} className="text-[#1DA1F2] flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-xs font-semibold text-[#0369A1]">
-            Images are optional but recommended
+            {isPremium
+              ? "Images are optional but recommended"
+              : "Free plan image access is limited to the front image"}
           </p>
           <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">
-            These images are uploaded securely and stored with the panel record.
+            {isPremium
+              ? "These images are uploaded securely and stored with the panel record."
+              : "Only the front image is available for Free plan users."}
           </p>
         </div>
       </div>
@@ -1872,10 +1912,12 @@ function Step4({
   data,
   panelId,
   selections,
+  isPremium,
 }: {
   data: FormData;
   panelId: string;
   selections: Record<string, { company?: string; model?: string }[]>;
+  isPremium: boolean;
 }) {
   const instrumentGroups = useMemo(
     () => buildInstrumentSummary(data, selections),
@@ -1883,12 +1925,14 @@ function Step4({
   );
   const enabledProtections = useMemo(() => getEnabledProtections(data), [data]);
 
-  const imageFields = [
-    { label: "Front Image", file: data.frontImage },
-    { label: "Inside Image", file: data.insideImage },
-    { label: "Name Plate Image", file: data.namePlateImage },
-    { label: "Side Image", file: data.sideImage },
-  ];
+  const imageFields = isPremium
+    ? [
+        { label: "Front Image", file: data.frontImage },
+        { label: "Inside Image", file: data.insideImage },
+        { label: "Name Plate Image", file: data.namePlateImage },
+        { label: "Side Image", file: data.sideImage },
+      ]
+    : [{ label: "Front Image", file: data.frontImage }];
   const diagramEntries = (data.diagrams || []).filter(Boolean);
 
   const technicalRows = [
@@ -1901,18 +1945,22 @@ function Step4({
       value: data.powerRating ? `${data.powerRating} kW` : "",
     },
     { label: "Power Factor", value: data.powerFactor },
-    { label: "Control Voltage", value: data.controlVoltage },
-    { label: "IP Rating", value: data.ipRating },
-    { label: "Enclosure Material", value: data.enclosureMaterial },
-    { label: "Panel Color", value: data.panelColor },
-    {
-      label: "Dimensions",
-      value: data.dimensions ? `${data.dimensions} mm` : "",
-    },
-    { label: "Weight", value: data.weight ? `${data.weight} kg` : "" },
-    { label: "Mounting Type", value: data.mountingType },
-    { label: "Cable Size", value: data.cableSize },
-    { label: "Control Cable Size", value: data.controlCableSize },
+    ...(isPremium
+      ? [
+          { label: "Control Voltage", value: data.controlVoltage },
+          { label: "IP Rating", value: data.ipRating },
+          { label: "Enclosure Material", value: data.enclosureMaterial },
+          { label: "Panel Color", value: data.panelColor },
+          {
+            label: "Dimensions",
+            value: data.dimensions ? `${data.dimensions} mm` : "",
+          },
+          { label: "Weight", value: data.weight ? `${data.weight} kg` : "" },
+          { label: "Mounting Type", value: data.mountingType },
+          { label: "Cable Size", value: data.cableSize },
+          { label: "Control Cable Size", value: data.controlCableSize },
+        ]
+      : []),
   ];
 
   return (
@@ -1924,21 +1972,21 @@ function Step4({
         />
         <div>
           <p className="text-xs font-semibold text-[#15803D]">
-            Ready to create panel
+            {isPremium ? "Ready to create panel" : "Free plan review"}
           </p>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Please review all information below before submitting. Click "Create
-            Panel" to save.
+            {isPremium
+              ? 'Please review all information below before submitting. Click "Create Panel" to save.'
+              : "Review your allowed free-plan panel details before saving."}
           </p>
         </div>
       </div>
 
-      {/* Panel ID highlight (render when panelId provided) */}
       {panelId && (
         <div className="bg-white rounded-2xl border border-[#E5E7EB] px-5 py-4 flex items-center justify-between">
           <div>
             <p className="text-[11px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">
-              Auto-generated Panel ID
+              Panel ID
             </p>
             <p className="text-xl font-bold text-[#1DA1F2] font-mono tracking-widest">
               {panelId}
@@ -1983,84 +2031,13 @@ function Step4({
           ))}
         </ReviewSection>
 
-        <ReviewSection title="Motors" icon={Package}>
-          {data.motorConfiguration?.length ? (
-            data.motorConfiguration.map((motor, index) => (
-              <div
-                key={`${motor.connectionType || "motor"}-${index}`}
-                className="border-b border-[#F1F5F9] py-3 last:border-0"
-              >
-                <p className="text-[11px] font-semibold text-[#0F172A] mb-2">
-                  Motor {index + 1}
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
-                    <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider">
-                      Connection Type
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      {motor.connectionType || "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
-                    <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider">
-                      Min HP
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      {motor.minHp || "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-[#F8FAFC] px-3 py-2">
-                    <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider">
-                      Max HP
-                    </p>
-                    <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                      {motor.maxHp || "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <ReviewRow label="Motor Configuration" value="No motors added" />
-          )}
+        <ReviewSection title="Motor Count" icon={Package}>
+          <ReviewRow
+            label="Number of Motors"
+            value={String(data.motorConfiguration?.length || 0)}
+          />
         </ReviewSection>
       </div>
-
-      <ReviewSection title="Instrument Models" icon={Zap}>
-        {instrumentGroups.length ? (
-          <div className="space-y-4 py-3">
-            {instrumentGroups.map(({ category, items }) => (
-              <div
-                key={category}
-                className="rounded-xl border border-[#E5E7EB] bg-white p-3"
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#1DA1F2] mb-2">
-                  {category}
-                </p>
-                <div className="space-y-2">
-                  {items.map(({ company, model, count }) => (
-                    <div
-                      key={`${category}-${company}-${model}`}
-                      className="rounded-lg bg-[#F8FAFC] px-3 py-2"
-                    >
-                      <p className="text-[11px] font-medium text-[#0F172A]">
-                        {count} × {company} — {model}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-3">
-            <p className="text-xs text-[#64748B]">
-              No instrument models were added.
-            </p>
-          </div>
-        )}
-      </ReviewSection>
 
       <ReviewSection title="Protection Features" icon={ShieldCheck}>
         {enabledProtections.length ? (
@@ -2084,6 +2061,71 @@ function Step4({
           </div>
         )}
       </ReviewSection>
+
+      {isPremium && (
+        <>
+          <ReviewSection title="Instrument Models" icon={Zap}>
+            {instrumentGroups.length ? (
+              <div className="space-y-4 py-3">
+                {instrumentGroups.map(({ category, items }) => (
+                  <div
+                    key={category}
+                    className="rounded-xl border border-[#E5E7EB] bg-white p-3"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#1DA1F2] mb-2">
+                      {category}
+                    </p>
+                    <div className="space-y-2">
+                      {items.map(({ company, model, count }) => (
+                        <div
+                          key={`${category}-${company}-${model}`}
+                          className="rounded-lg bg-[#F8FAFC] px-3 py-2"
+                        >
+                          <p className="text-[11px] font-medium text-[#0F172A]">
+                            {count} × {company} — {model}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-3">
+                <p className="text-xs text-[#64748B]">
+                  No instrument models were added.
+                </p>
+              </div>
+            )}
+          </ReviewSection>
+
+          <ReviewSection title="Wiring Diagrams" icon={FileText}>
+            {diagramEntries.length ? (
+              <div className="space-y-3 py-3">
+                {diagramEntries.map((diagram, index) => (
+                  <div
+                    key={`${diagram.name || "diagram"}-${index}`}
+                    className="rounded-xl border border-[#E5E7EB] bg-white p-3"
+                  >
+                    <p className="text-[11px] font-semibold text-[#0F172A]">
+                      {diagram.name || `Diagram ${index + 1}`}
+                    </p>
+                    <p className="text-[10px] text-[#64748B] mt-1">
+                      {diagram.file?.name || "Uploaded diagram file"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-3">
+                <p className="text-xs text-[#64748B]">
+                  No wiring diagrams were attached.
+                </p>
+              </div>
+            )}
+          </ReviewSection>
+        </>
+      )}
 
       <ReviewSection title="Images" icon={Camera}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 py-3">
@@ -2119,32 +2161,6 @@ function Step4({
             );
           })}
         </div>
-      </ReviewSection>
-
-      <ReviewSection title="Wiring Diagrams" icon={FileText}>
-        {diagramEntries.length ? (
-          <div className="space-y-3 py-3">
-            {diagramEntries.map((diagram, index) => (
-              <div
-                key={`${diagram.name || "diagram"}-${index}`}
-                className="rounded-xl border border-[#E5E7EB] bg-white p-3"
-              >
-                <p className="text-[11px] font-semibold text-[#0F172A]">
-                  {diagram.name || `Diagram ${index + 1}`}
-                </p>
-                <p className="text-[10px] text-[#64748B] mt-1">
-                  {diagram.file?.name || "Uploaded diagram file"}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="py-3">
-            <p className="text-xs text-[#64748B]">
-              No wiring diagrams were attached.
-            </p>
-          </div>
-        )}
       </ReviewSection>
     </div>
   );
@@ -2276,7 +2292,13 @@ export default function CreatePanelWizard({
 }: PanelWizardProps = {}) {
   const { currentUser } = useApp();
   const isPremium = currentUser?.plan === "PREMIUM";
-  const visibleSteps = BASE_STEPS;
+  const visibleSteps = useMemo(
+    () =>
+      isPremium
+        ? BASE_STEPS
+        : BASE_STEPS.filter((step) => step.id !== 3 && step.id !== 5),
+    [isPremium],
+  );
   const [step, setStep] = useState(1);
   const [data, setData] = useState<FormData>(INITIAL);
 
@@ -2285,6 +2307,12 @@ export default function CreatePanelWizard({
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [step]);
+
+  useEffect(() => {
+    if (step > visibleSteps.length) {
+      setStep(visibleSteps.length);
+    }
+  }, [step, visibleSteps.length]);
   const [errors, setErrors] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -2303,6 +2331,7 @@ export default function CreatePanelWizard({
   const [loadingPanel, setLoadingPanel] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const isEditMode = mode === "edit";
+  const currentStep = visibleSteps[step - 1];
   const panelId = isEditMode
     ? existingPanelId || editPanelId || ""
     : step === visibleSteps.length
@@ -2541,7 +2570,7 @@ export default function CreatePanelWizard({
       return;
     }
 
-    if (step === 3 && isPremium) {
+    if (currentStep?.id === 3 && isPremium) {
       const modelErrors: string[] = [];
       instrumentCategories.forEach((category) => {
         const qty = Number(data.instrumentCategoryQuantities?.[category] || 0);
@@ -2980,19 +3009,19 @@ export default function CreatePanelWizard({
                 {visibleSteps[step - 1]?.label}
               </h2>
               <p className="text-xs text-[#64748B] mt-0.5">
-                {step === 1 &&
+                {currentStep?.id === 1 &&
                   "Enter the core details and assignment information for this panel."}
-                {step === 2 &&
+                {currentStep?.id === 2 &&
                   "Specify the electrical and physical parameters of this panel."}
-                {step === 3 &&
+                {currentStep?.id === 3 &&
                   (isPremium
                     ? "Assign instrument models based on the Technical Specifications."
                     : "Upgrade to Premium to unlock instrument model selection and documentation tools.")}
-                {step === 4 &&
+                {currentStep?.id === 4 &&
                   "Upload photos and reference images for identification and documentation."}
-                {step === 5 &&
+                {currentStep?.id === 5 &&
                   "Attach optional wiring diagrams and supporting drawings for this panel."}
-                {step === 6 &&
+                {currentStep?.id === 6 &&
                   (isEditMode
                     ? "Review all information before saving your changes."
                     : "Review all information before creating the panel in the system.")}
@@ -3005,15 +3034,16 @@ export default function CreatePanelWizard({
 
           {/* Step content */}
           <div className="p-8">
-            {step === 1 && <Step1 data={data} set={set} />}
-            {step === 2 && (
+            {currentStep?.id === 1 && <Step1 data={data} set={set} />}
+            {currentStep?.id === 2 && (
               <Step2
                 data={data}
                 set={set}
                 instrumentCategories={instrumentCategories}
+                isPremium={isPremium}
               />
             )}
-            {step === 3 && isPremium && (
+            {currentStep?.id === 3 && isPremium && (
               <StepInstrumentModels
                 data={data}
                 instrumentList={instrumentList}
@@ -3022,11 +3052,18 @@ export default function CreatePanelWizard({
                 setSelections={setSelections}
               />
             )}
-            {step === 3 && !isPremium && <PremiumUpgradeCard />}
-            {step === 4 && <Step3 data={data} set={set} />}
-            {step === 5 && <DiagramsStep data={data} set={set} />}
-            {step === 6 && (
-              <Step4 data={data} panelId={panelId} selections={selections} />
+            {currentStep?.id === 3 && !isPremium && <PremiumUpgradeCard />}
+            {currentStep?.id === 4 && (
+              <Step3 data={data} set={set} isPremium={isPremium} />
+            )}
+            {currentStep?.id === 5 && <DiagramsStep data={data} set={set} />}
+            {currentStep?.id === 6 && (
+              <Step4
+                data={data}
+                panelId={panelId}
+                selections={selections}
+                isPremium={isPremium}
+              />
             )}
           </div>
 

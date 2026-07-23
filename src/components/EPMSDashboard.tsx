@@ -840,19 +840,30 @@ export default function EPMSDashboard() {
                               >
                                 <Edit3 size={14} />
                               </button>
-                              <button
-                                onClick={() =>
-                                  setQrPanelId(
-                                    panel.panelId || panel.id || null,
-                                  )
-                                }
-                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                                title="View QR code"
-                              >
-                                <QrCode size={14} />
-                              </button>
+                              {!isFree ? (
+                                <button
+                                  onClick={() =>
+                                    setQrPanelId(
+                                      panel.panelId || panel.id || null,
+                                    )
+                                  }
+                                  className="p-1.5 rounded-lg text-[#64748B] hover:text-[#475569] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
+                                  title="View QR code"
+                                >
+                                  <QrCode size={14} />
+                                </button>
+                              ) : (
+                                <div className="p-1.5" />
+                              )}
                               <button
                                 onClick={() => {
+                                  if (isFree) {
+                                    setQrPanelId(
+                                      panel.panelId || panel.id || null,
+                                    );
+                                    return;
+                                  }
+
                                   window.history.pushState(
                                     {},
                                     "",
@@ -863,7 +874,9 @@ export default function EPMSDashboard() {
                                   );
                                 }}
                                 className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#64748B] hover:bg-[#F1F5F9] transition-colors flex items-center justify-center"
-                                title="View panel"
+                                title={
+                                  isFree ? "View panel review" : "View panel"
+                                }
                               >
                                 <Eye size={14} />
                               </button>
@@ -964,7 +977,7 @@ export default function EPMSDashboard() {
                         )}
                         {qrPanelId && (
                           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-                            <div className="relative w-full max-w-3xl rounded-3xl bg-white border border-[#E5E7EB] shadow-2xl overflow-hidden">
+                            <div className="relative w-full max-w-3xl max-h-[90vh] rounded-3xl bg-white border border-[#E5E7EB] shadow-2xl overflow-hidden">
                               <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
                                 <div>
                                   <p className="text-sm font-bold text-[#0F172A]">
@@ -983,7 +996,7 @@ export default function EPMSDashboard() {
                                   <X size={18} />
                                 </button>
                               </div>
-                              <div className="p-6">
+                              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                                 {filteredPanels.find(
                                   (item) =>
                                     item.panelId === qrPanelId ||
@@ -996,6 +1009,7 @@ export default function EPMSDashboard() {
                                         item.id === qrPanelId,
                                     )}
                                     onBack={() => setQrPanelId(null)}
+                                    isFree={isFree}
                                   />
                                 ) : (
                                   <div className="rounded-3xl border border-[#E5E7EB] p-10 text-center text-sm text-[#64748B]">

@@ -2,7 +2,12 @@ import { useState } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 
 interface SignupFormProps {
-  onSubmit: (name: string, email: string, password: string) => Promise<void>;
+  onSubmit: (
+    name: string,
+    email: string,
+    password: string,
+    companyName: string,
+  ) => Promise<void>;
   loading: boolean;
   error: string;
 }
@@ -10,13 +15,17 @@ interface SignupFormProps {
 export function SignupForm({ onSubmit, loading, error }: SignupFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPass, setShowPass] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    await onSubmit(name, email, password);
+    if (password !== confirm) {
+      return;
+    }
+    await onSubmit(name, email, password, companyName);
   };
 
   return (
@@ -51,6 +60,20 @@ export function SignupForm({ onSubmit, loading, error }: SignupFormProps) {
           placeholder="you@company.com"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
+          className="w-full px-3.5 py-2.5 text-sm border border-[#E5E7EB] rounded-xl bg-white text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all"
+        />
+      </div>
+
+      <div>
+        <label className="text-xs font-semibold text-[#0F172A] block mb-1.5">
+          Company Name
+        </label>
+        <input
+          type="text"
+          required
+          placeholder="Your company"
+          value={companyName}
+          onChange={(event) => setCompanyName(event.target.value)}
           className="w-full px-3.5 py-2.5 text-sm border border-[#E5E7EB] rounded-xl bg-white text-[#0F172A] placeholder:text-[#94A3B8] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20 focus:border-[#0EA5E9] transition-all"
         />
       </div>

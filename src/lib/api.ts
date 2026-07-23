@@ -26,8 +26,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
+    const responseData = error?.response?.data;
     const message =
-      error?.response?.data?.error || error?.message || "Request failed";
+      responseData?.error ||
+      responseData?.message ||
+      error?.message ||
+      "Request failed";
     if (status === 401) {
       // Clear tokens and redirect to login only when auth is invalid.
       localStorage.removeItem("epms_token");
@@ -38,8 +42,12 @@ api.interceptors.response.use(
         // ignore in non-browser environments
       }
     }
-    const wrappedError = new Error(message) as Error & { status?: number };
+    const wrappedError = new Error(message) as Error & {
+      status?: number;
+      responseData?: unknown;
+    };
     wrappedError.status = status;
+    wrappedError.responseData = responseData;
     return Promise.reject(wrappedError);
   },
 );

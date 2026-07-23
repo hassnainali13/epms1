@@ -3,6 +3,7 @@ import { Zap, Shield, Check } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { LoginForm } from "./auth/LoginForm";
 import { SignupForm } from "./auth/SignupForm";
+import { VerifyEmail } from "./auth/VerifyEmail";
 
 type Mode = "login" | "register" | "admin";
 
@@ -25,7 +26,10 @@ export default function LoginPage({
   const { loginUser, loginAdmin, registerUser } = useApp();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
+  const [showVerification, setShowVerification] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
@@ -34,6 +38,9 @@ export default function LoginPage({
 
   function reset() {
     setError("");
+    setMessage("");
+    setPendingEmail("");
+    setShowVerification(false);
   }
 
   function switchMode(m: Mode) {
@@ -50,10 +57,21 @@ export default function LoginPage({
 
   async function handleLogin(email: string, password: string) {
     setError("");
+    setMessage("");
     setLoading(true);
     try {
       const res = await loginUser(email, password);
-      if (!res.ok) setError(res.error ?? "Login failed.");
+      if (!res.ok) {
+        if (res.requiresEmailVerification) {
+          setPendingEmail(res.email ?? email);
+          setShowVerification(true);
+          setMessage(
+            res.message ?? "Please verify your email before logging in.",
+          );
+          return;
+        }
+        setError(res.error ?? "Login failed.");
+      }
     } finally {
       setLoading(false);
     }
@@ -61,6 +79,7 @@ export default function LoginPage({
 
   async function handleAdminLogin(email: string, password: string) {
     setError("");
+    setMessage("");
     setLoading(true);
     try {
       const res = await loginAdmin(email, password);
@@ -74,12 +93,19 @@ export default function LoginPage({
     nameValue: string,
     email: string,
     password: string,
+    companyName: string,
   ) {
     setError("");
+    setMessage("");
     setLoading(true);
     try {
       if (!nameValue.trim()) {
         setError("Please enter your full name.");
+        setLoading(false);
+        return;
+      }
+      if (!companyName.trim()) {
+        setError("Please enter your company name.");
         setLoading(false);
         return;
       }
@@ -88,14 +114,29 @@ export default function LoginPage({
         setLoading(false);
         return;
       }
-      const res = await registerUser(nameValue.trim(), email, password);
-      if (!res.ok) setError(res.error ?? "Registration failed.");
+      const res = await registerUser(
+        nameValue.trim(),
+        email,
+        password,
+        companyName.trim(),
+      );
+      if (!res.ok) {
+        setError(res.error ?? "Registration failed.");
+      } else {
+        setPendingEmail(email);
+        setShowVerification(true);
+        setMessage(
+          "Verification code sent successfully. Please check your email.",
+        );
+      }
     } finally {
       setLoading(false);
     }
   }
 
   const isAdmin = mode === "admin";
+  const isVerificationView =
+    showVerification && (mode === "login" || mode === "register");
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex font-[Inter,sans-serif]">
@@ -206,13 +247,25 @@ export default function LoginPage({
           {/* Heading */}
           <div className="mb-6">
             <h2 className="text-xl font-bold text-[#0F172A]">
-              {mode === "login" && "Sign in to your account"}
-              {mode === "register" && "Create your account"}
+              {isVerificationView && "Verify Your Email"}
+              {!isVerificationView &&
+                mode === "login" &&
+                "Sign in to your account"}
+              {!isVerificationView &&
+                mode === "register" &&
+                "Create your account"}
               {mode === "admin" && "Admin sign in"}
             </h2>
             <p className="text-sm text-[#64748B] mt-1">
-              {mode === "login" && "Enter your credentials to continue"}
-              {mode === "register" &&
+              {isVerificationView &&
+                (mode === "login"
+                  ? "Please verify your email before logging in."
+                  : "Please verify your email to continue.")}
+              {!isVerificationView &&
+                mode === "login" &&
+                "Enter your credentials to continue"}
+              {!isVerificationView &&
+                mode === "register" &&
                 "Start with a free account — no credit card required"}
               {mode === "admin" &&
                 "Restricted to authorized administrators only"}
@@ -220,23 +273,50 @@ export default function LoginPage({
           </div>
 
           {/* Form */}
-          {mode === "register" ? (
-            <SignupForm
-              onSubmit={handleSignup}
-              loading={loading}
-              error={error}
+          {showVerification && (mode === "login" || mode === "register") ? (
+            <VerifyEmail
+              email={pendingEmail}
+              initialSuccessMessage={
+                mode === "register"
+                  ? "Verification code sent successfully. Please check your email."
+                  : undefined
+              }
+              initialCountdown={mode === "register" ? 60 : 0}
+              onVerified={() => {
+                setShowVerification(false);
+                setMode("login");
+                setMessage("Email verified successfully. Please sign in.");
+              }}
+              onBackToLogin={() => {
+                setShowVerification(false);
+                setMode("login");
+              }}
             />
+          ) : mode === "register" ? (
+            <>
+              {message && (
+                <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">
+                  {message}
+                </div>
+              )}
+              <SignupForm
+                onSubmit={handleSignup}
+                loading={loading}
+                error={error}
+              />
+            </>
           ) : (
             <LoginForm
               onSubmit={mode === "admin" ? handleAdminLogin : handleLogin}
               loading={loading}
               error={error}
               isAdmin={isAdmin}
+              initialEmail={pendingEmail}
             />
           )}
 
           {/* Mode switchers */}
-          {!isAdmin && (
+          {!isAdmin && !showVerification && (
             <div className="mt-4 text-center">
               {mode === "login" ? (
                 <p className="text-sm text-[#64748B]">

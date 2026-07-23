@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 
 interface LoginFormProps {
@@ -6,6 +6,7 @@ interface LoginFormProps {
   loading: boolean;
   error: string;
   isAdmin?: boolean;
+  initialEmail?: string;
 }
 
 export function LoginForm({
@@ -13,10 +14,15 @@ export function LoginForm({
   loading,
   error,
   isAdmin = false,
+  initialEmail = "",
 }: LoginFormProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+
+  useEffect(() => {
+    setEmail(initialEmail);
+  }, [initialEmail]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

@@ -1,4 +1,11 @@
-import { ArrowLeft, Download, Info, Printer, QrCode } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Image as ImageIcon,
+  Info,
+  Printer,
+  QrCode,
+} from "lucide-react";
 import { jsPDF } from "jspdf";
 import { useRef } from "react";
 import { useApp } from "../context/AppContext";
@@ -12,9 +19,11 @@ const stickerSafetyFirst = new URL(
 export default function PanelQRCode({
   panel,
   onBack,
+  isFree = false,
 }: {
   panel?: Panel;
   onBack?: () => void;
+  isFree?: boolean;
 }) {
   const printRef = useRef<HTMLDivElement | null>(null);
   const qrPayload =
@@ -51,7 +60,16 @@ export default function PanelQRCode({
   ): Promise<{ dataUrl: string; width: number; height: number }> =>
     new Promise((resolve, reject) => {
       const img = new Image();
-      img.crossOrigin = "anonymous";
+      if (!src.startsWith("data:")) {
+        try {
+          const url = new URL(src, window.location.href);
+          if (url.origin !== window.location.origin) {
+            img.crossOrigin = "anonymous";
+          }
+        } catch {
+          img.crossOrigin = "anonymous";
+        }
+      }
       img.onload = () => {
         const canvas = document.createElement("canvas");
         canvas.width = img.naturalWidth;
@@ -92,7 +110,11 @@ export default function PanelQRCode({
   };
 
   const createStickerPdf = async () => {
-    const qrData = qrImageSrc ? await loadImageDataUrl(qrImageSrc) : null;
+    const qrData = isFree
+      ? null
+      : qrImageSrc
+        ? await loadImageDataUrl(qrImageSrc)
+        : null;
     const width = 76.2; // 3 inches in mm
     const height = 304.8; // 12 inches in mm
     const margin = 6;
@@ -109,7 +131,8 @@ export default function PanelQRCode({
     pdf.setFontSize(10);
 
     // ---- Header: company logo + name, proportionally sized and aligned ----
-    let logoInfo: { dataUrl: string; width: number; height: number } | null = null;
+    let logoInfo: { dataUrl: string; width: number; height: number } | null =
+      null;
     if (companyLogoSrc) {
       try {
         logoInfo = await loadImageWithDimensions(companyLogoSrc);
@@ -121,7 +144,12 @@ export default function PanelQRCode({
     const maxLogoWidth = 20;
     const maxLogoHeight = 20;
     const logoDims = logoInfo
-      ? fitWithinBounds(logoInfo.width, logoInfo.height, maxLogoWidth, maxLogoHeight)
+      ? fitWithinBounds(
+          logoInfo.width,
+          logoInfo.height,
+          maxLogoWidth,
+          maxLogoHeight,
+        )
       : { width: 0, height: 0 };
 
     const headerRowHeight = Math.max(logoDims.height, 8);
@@ -129,31 +157,42 @@ export default function PanelQRCode({
     if (logoInfo) {
       // Vertically center the logo within the header row.
       const logoY = y + (headerRowHeight - logoDims.height) / 2;
-      pdf.addImage(logoInfo.dataUrl, "PNG", margin, logoY, logoDims.width, logoDims.height);
+      pdf.addImage(
+        logoInfo.dataUrl,
+        "PNG",
+        margin,
+        logoY,
+        logoDims.width,
+        logoDims.height,
+      );
     }
 
     // Position the company name beside the logo, sharing its vertical center.
     const nameX = margin + (logoInfo ? logoDims.width + 3 : 0);
     const nameY = y + headerRowHeight / 2 + 2;
-    pdf.text(companyName, nameX, nameY, { maxWidth: contentWidth - (logoInfo ? logoDims.width + 3 : 0) });
+    pdf.text(companyName, nameX, nameY, {
+      maxWidth: contentWidth - (logoInfo ? logoDims.width + 3 : 0),
+    });
 
     y += headerRowHeight + 6;
 
-    const qrSize = 52;
-    const qrX = (width - qrSize) / 2;
-    if (qrData) {
-      pdf.addImage(qrData, "PNG", qrX, y, qrSize, qrSize);
+    if (!isFree) {
+      const qrSize = 52;
+      const qrX = (width - qrSize) / 2;
+      if (qrData) {
+        pdf.addImage(qrData, "PNG", qrX, y, qrSize, qrSize);
+      }
+
+      y += qrSize + 6;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(6.8);
+      pdf.setTextColor("#475569");
+      pdf.text("Scan to access panel details instantly", width / 2, y, {
+        align: "center",
+      });
+
+      y += 10;
     }
-
-    y += qrSize + 6;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(6.8);
-    pdf.setTextColor("#475569");
-    pdf.text("Scan to access panel details instantly", width / 2, y, {
-      align: "center",
-    });
-
-    y += 10;
     const sectionPadding = 4;
     const rowHeight = 7;
 
@@ -297,9 +336,14 @@ export default function PanelQRCode({
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(6.2);
     pdf.setTextColor("#94A3B8");
-    pdf.text("Reliable Power. Smart Control.", width / 2, Math.min(y, height - 6), {
-      align: "center",
-    });
+    pdf.text(
+      "Reliable Power. Smart Control.",
+      width / 2,
+      Math.min(y, height - 6),
+      {
+        align: "center",
+      },
+    );
 
     return pdf;
   };
@@ -345,236 +389,501 @@ export default function PanelQRCode({
   };
 
   return (
-    <div
-      ref={printRef}
-      className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-1 gap-5"
-    >
-      <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden print:shadow-none print:border-black/10">
-        <div className="flex flex-col gap-3 px-6 py-4 border-b border-[#F1F5F9] sm:flex-row sm:items-center sm:justify-between">
-         
+    <div className="space-y-4">
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-[#64748B] hover:text-[#0F172A] transition-colors group"
+        >
+          <ArrowLeft
+            size={15}
+            className="group-hover:-translate-x-0.5 transition-transform"
+          />
+          Back
+        </button>
+      )}
 
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: "#0EA5E915" }}
-            >
-              <QrCode size={16} style={{ color: "#0EA5E9" }} />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-[#0F172A]">QR Code</p>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                Scan to access panel details instantly
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-8 flex flex-col items-center">
-          <div className="relative">
-            <div className="w-52 h-52 bg-white border-2 border-[#0F172A] rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-center">
-              {qrImageSrc ? (
-                <img
-                  src={qrImageSrc}
-                  alt="Panel QR Code"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="text-center text-xs text-[#64748B]">
-                  QR not available
+      <div
+        ref={printRef}
+        className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-1 gap-5"
+      >
+        {!isFree ? (
+          <>
+            <div className="space-y-5">
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden print:shadow-none print:border-black/10">
+                <div className="flex flex-col gap-3 px-6 py-4 border-b border-[#F1F5F9] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "#0EA5E915" }}
+                    >
+                      <QrCode size={16} style={{ color: "#0EA5E9" }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#0F172A]">
+                        QR Code
+                      </p>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        Scan to access panel details instantly
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#16A34A] to-[#2563EB] flex items-center justify-center shadow-lg">
-                <span className="text-[10px] font-bold tracking-[0.22em] text-white">
-                  EPMS
-                </span>
+
+                <div className="p-8 flex flex-col items-center">
+                  <div className="relative">
+                    <div className="w-52 h-52 bg-white border-2 border-[#0F172A] rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex items-center justify-center">
+                      {qrImageSrc ? (
+                        <img
+                          src={qrImageSrc}
+                          alt="Panel QR Code"
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <div className="text-center text-xs text-[#64748B]">
+                          QR not available
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#16A34A] to-[#2563EB] flex items-center justify-center shadow-lg">
+                        <span className="text-[10px] font-bold tracking-[0.22em] text-white">
+                          EPMS
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 text-center">
+                    <p className="text-base font-bold text-[#0F172A] font-mono tracking-widest">
+                      {panel?.panelId || panel?.id || "—"}
+                    </p>
+                    <p className="text-xs text-[#64748B] mt-1">
+                      Scan to view full panel details
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-5 text-center">
-            <p className="text-base font-bold text-[#0F172A] font-mono tracking-widest">
-              {panel?.panelId || panel?.id || "—"}
-            </p>
-            <p className="text-xs text-[#64748B] mt-1">
-              Scan to view full panel details
-            </p>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-3 w-full sm:flex-row sm:justify-center print:hidden">
-            <button
-              type="button"
-              onClick={() => void exportToPdf()}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0EA5E9] bg-white px-4 py-3 text-xs font-semibold text-[#0EA5E9] transition-colors hover:bg-[#EFF6FF]"
-            >
-              <Download size={14} />
-              Download PDF
-            </button>
-            <button
-              type="button"
-              onClick={openPrintWindow}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-semibold text-[#475569] transition-colors hover:bg-[#F8FAFC]"
-            >
-              <Printer size={14} />
-              Print
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="space-y-5 overflow-y-auto max-h-[calc(100vh-240px)] print:overflow-visible print:max-h-full print:h-auto">
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: "#8B5CF615" }}
-              >
-                <Info size={16} style={{ color: "#8B5CF6" }} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-[#0F172A]">
-                  Basic Information
-                </p>
-                <p className="text-xs text-[#64748B] mt-0.5">
-                  Panel core details
-                </p>
+              <div className="mt-0 flex flex-col gap-3 w-full sm:flex-row sm:justify-center print:hidden">
+                <button
+                  type="button"
+                  onClick={() => void exportToPdf()}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0EA5E9] bg-white px-4 py-3 text-xs font-semibold text-[#0EA5E9] transition-colors hover:bg-[#EFF6FF]"
+                >
+                  <Download size={14} />
+                  Download PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={openPrintWindow}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-semibold text-[#475569] transition-colors hover:bg-[#F8FAFC]"
+                >
+                  <Printer size={14} />
+                  Print
+                </button>
               </div>
             </div>
-          </div>
 
-          <div className="p-5 space-y-3">
-            {[
-              { label: "Panel ID", value: panel?.panelId || panel?.id || "—" },
-              {
-                label: "Panel Name",
-                value: panel?.panelName || panel?.name || "—",
-              },
-              {
-                label: "Panel Type",
-                value: panel?.panelType || panel?.type || "—",
-              },
-              { label: "Status", value: panel?.status || "—" },
-              { label: "Customer", value: panel?.customer || "—" },
-              { label: "Project", value: panel?.projectName || "—" },
-              // {
-              //   label: "Location",
-              //   value: panel?.installationLocation || panel?.location || "—",
-              // },
-            ].map(({ label, value }) => (
-              <div
-                key={label}
-                className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
-              >
-                <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
-                  {label}
-                </span>
-                <span className="text-xs font-semibold text-[#0F172A] text-right">
-                  {value}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+            <div className="overflow-hidden rounded-3xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] md:max-h-[60vh]">
+              <div className="h-full overflow-y-auto pr-2 pb-4">
+                <div className="space-y-5 p-0">
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: "#8B5CF615" }}
+                        >
+                          <Info size={16} style={{ color: "#8B5CF6" }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#0F172A]">
+                            Basic Information
+                          </p>
+                          <p className="text-xs text-[#64748B] mt-0.5">
+                            Panel core details
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-        <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: "#8B5CF615" }}
-              >
-                <Info size={16} style={{ color: "#8B5CF6" }} />
-              </div>
-              <div>
-                <p className="text-sm font-bold text-[#0F172A]">
-                  Technical Specs
-                </p>
-                <p className="text-xs text-[#64748B] mt-0.5">
-                  Electrical and panel specifications
-                </p>
+                    <div className="p-5 space-y-3">
+                      {[
+                        {
+                          label: "Panel ID",
+                          value: panel?.panelId || panel?.id || "—",
+                        },
+                        {
+                          label: "Panel Name",
+                          value: panel?.panelName || panel?.name || "—",
+                        },
+                        {
+                          label: "Panel Type",
+                          value: panel?.panelType || panel?.type || "—",
+                        },
+                        { label: "Status", value: panel?.status || "—" },
+                        { label: "Customer", value: panel?.customer || "—" },
+                        { label: "Project", value: panel?.projectName || "—" },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
+                        >
+                          <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
+                            {label}
+                          </span>
+                          <span className="text-xs font-semibold text-[#0F172A] text-right">
+                            {value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: "#8B5CF615" }}
+                        >
+                          <Info size={16} style={{ color: "#8B5CF6" }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#0F172A]">
+                            Technical Specs
+                          </p>
+                          <p className="text-xs text-[#64748B] mt-0.5">
+                            Electrical and panel specifications
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      {[
+                        {
+                          label: "Voltage",
+                          value: panel?.technicalSpecs?.voltage || "—",
+                        },
+                        {
+                          label: "Current",
+                          value: panel?.technicalSpecs?.current || "—",
+                        },
+                        {
+                          label: "Frequency",
+                          value: panel?.technicalSpecs?.frequency || "—",
+                        },
+                        {
+                          label: "Phase",
+                          value: panel?.technicalSpecs?.phase || "—",
+                        },
+                        {
+                          label: "Power Rating",
+                          value: panel?.technicalSpecs?.powerRating || "—",
+                        },
+                        {
+                          label: "Power Factor",
+                          value: panel?.technicalSpecs?.powerFactor || "—",
+                        },
+                        {
+                          label: "Control Voltage",
+                          value: panel?.technicalSpecs?.controlVoltage || "—",
+                        },
+                        {
+                          label: "IP Rating",
+                          value: panel?.technicalSpecs?.ipRating || "—",
+                        },
+                        {
+                          label: "Enclosure Material",
+                          value:
+                            panel?.technicalSpecs?.enclosureMaterial || "—",
+                        },
+                        {
+                          label: "Panel Color",
+                          value: panel?.technicalSpecs?.panelColor || "—",
+                        },
+                        {
+                          label: "Dimensions",
+                          value: panel?.technicalSpecs?.dimensions || "—",
+                        },
+                        {
+                          label: "Weight",
+                          value: panel?.technicalSpecs?.weight || "—",
+                        },
+                        {
+                          label: "Mounting Type",
+                          value: panel?.technicalSpecs?.mountingType || "—",
+                        },
+                        {
+                          label: "Cable Size",
+                          value: panel?.technicalSpecs?.cableSize || "—",
+                        },
+                        {
+                          label: "Control Cable Size",
+                          value: panel?.technicalSpecs?.controlCableSize || "—",
+                        },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
+                        >
+                          <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
+                            {label}
+                          </span>
+                          <span className="text-xs font-semibold text-[#0F172A] text-right">
+                            {value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-5 md:col-span-1 md:max-w-[360px]">
+              <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden print:shadow-none print:border-black/10">
+                <div className="flex flex-col gap-3 px-6 py-4 border-b border-[#F1F5F9] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-xl flex items-center justify-center"
+                      style={{ backgroundColor: "#0EA5E915" }}
+                    >
+                      <Download size={16} style={{ color: "#0EA5E9" }} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#0F172A]">
+                        Export Panel Review
+                      </p>
+                      <p className="text-xs text-[#64748B] mt-0.5">
+                        Download or print the approved read-only panel summary
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="p-5 space-y-3">
-            {[
-              {
-                label: "Voltage",
-                value: panel?.technicalSpecs?.voltage || "—",
-              },
-              {
-                label: "Current",
-                value: panel?.technicalSpecs?.current || "—",
-              },
-              {
-                label: "Frequency",
-                value: panel?.technicalSpecs?.frequency || "—",
-              },
-              {
-                label: "Phase",
-                value: panel?.technicalSpecs?.phase || "—",
-              },
-              {
-                label: "Power Rating",
-                value: panel?.technicalSpecs?.powerRating || "—",
-              },
-              {
-                label: "Power Factor",
-                value: panel?.technicalSpecs?.powerFactor || "—",
-              },
-              {
-                label: "Control Voltage",
-                value: panel?.technicalSpecs?.controlVoltage || "—",
-              },
-              {
-                label: "IP Rating",
-                value: panel?.technicalSpecs?.ipRating || "—",
-              },
-              {
-                label: "Enclosure Material",
-                value: panel?.technicalSpecs?.enclosureMaterial || "—",
-              },
-              {
-                label: "Panel Color",
-                value: panel?.technicalSpecs?.panelColor || "—",
-              },
-              {
-                label: "Dimensions",
-                value: panel?.technicalSpecs?.dimensions || "—",
-              },
-              {
-                label: "Weight",
-                value: panel?.technicalSpecs?.weight || "—",
-              },
-              {
-                label: "Mounting Type",
-                value: panel?.technicalSpecs?.mountingType || "—",
-              },
-              {
-                label: "Cable Size",
-                value: panel?.technicalSpecs?.cableSize || "—",
-              },
-              {
-                label: "Control Cable Size",
-                value: panel?.technicalSpecs?.controlCableSize || "—",
-              },
-            ].map(({ label, value }) => (
-              <div
-                key={label}
-                className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
-              >
-                <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
-                  {label}
-                </span>
-                <span className="text-xs font-semibold text-[#0F172A] text-right">
-                  {value}
-                </span>
+                <div className="p-8 flex flex-col items-center justify-center min-h-[220px]">
+                  <div className="mt-6 flex flex-col gap-3 w-full sm:flex-row sm:justify-center print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => void exportToPdf()}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0EA5E9] bg-white px-4 py-3 text-xs font-semibold text-[#0EA5E9] transition-colors hover:bg-[#EFF6FF]"
+                    >
+                      <Download size={14} />
+                      Download PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={openPrintWindow}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E5E7EB] bg-white px-4 py-3 text-xs font-semibold text-[#475569] transition-colors hover:bg-[#F8FAFC]"
+                    >
+                      <Printer size={14} />
+                      Print
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+
+            <div className="overflow-hidden rounded-3xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] md:max-h-[60vh]">
+              <div className="h-full overflow-y-auto pr-2 pb-4">
+                <div className="space-y-5 p-0">
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: "#8B5CF615" }}
+                        >
+                          <Info size={16} style={{ color: "#8B5CF6" }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#0F172A]">
+                            Basic Information
+                          </p>
+                          <p className="text-xs text-[#64748B] mt-0.5">
+                            Panel core details
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      {[
+                        {
+                          label: "Panel ID",
+                          value: panel?.panelId || panel?.id || "—",
+                        },
+                        {
+                          label: "Panel Name",
+                          value: panel?.panelName || panel?.name || "—",
+                        },
+                        {
+                          label: "Panel Type",
+                          value: panel?.panelType || panel?.type || "—",
+                        },
+                        { label: "Status", value: panel?.status || "—" },
+                        { label: "Customer", value: panel?.customer || "—" },
+                        { label: "Project", value: panel?.projectName || "—" },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
+                        >
+                          <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
+                            {label}
+                          </span>
+                          <span className="text-xs font-semibold text-[#0F172A] text-right">
+                            {value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[#F1F5F9]">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-xl flex items-center justify-center"
+                          style={{ backgroundColor: "#8B5CF615" }}
+                        >
+                          <Info size={16} style={{ color: "#8B5CF6" }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-[#0F172A]">
+                            Technical Specs
+                          </p>
+                          <p className="text-xs text-[#64748B] mt-0.5">
+                            Electrical and panel specifications
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      {[
+                        {
+                          label: "Voltage",
+                          value: panel?.technicalSpecs?.voltage || "—",
+                        },
+                        {
+                          label: "Current",
+                          value: panel?.technicalSpecs?.current || "—",
+                        },
+                        {
+                          label: "Frequency",
+                          value: panel?.technicalSpecs?.frequency || "—",
+                        },
+                        {
+                          label: "Phase",
+                          value: panel?.technicalSpecs?.phase || "—",
+                        },
+                        {
+                          label: "Power Rating",
+                          value: panel?.technicalSpecs?.powerRating || "—",
+                        },
+                        {
+                          label: "Power Factor",
+                          value: panel?.technicalSpecs?.powerFactor || "—",
+                        },
+                        {
+                          label: "Control Voltage",
+                          value: panel?.technicalSpecs?.controlVoltage || "—",
+                        },
+                        {
+                          label: "IP Rating",
+                          value: panel?.technicalSpecs?.ipRating || "—",
+                        },
+                        {
+                          label: "Enclosure Material",
+                          value:
+                            panel?.technicalSpecs?.enclosureMaterial || "—",
+                        },
+                        {
+                          label: "Panel Color",
+                          value: panel?.technicalSpecs?.panelColor || "—",
+                        },
+                        {
+                          label: "Dimensions",
+                          value: panel?.technicalSpecs?.dimensions || "—",
+                        },
+                        {
+                          label: "Weight",
+                          value: panel?.technicalSpecs?.weight || "—",
+                        },
+                        {
+                          label: "Mounting Type",
+                          value: panel?.technicalSpecs?.mountingType || "—",
+                        },
+                        {
+                          label: "Cable Size",
+                          value: panel?.technicalSpecs?.cableSize || "—",
+                        },
+                        {
+                          label: "Control Cable Size",
+                          value: panel?.technicalSpecs?.controlCableSize || "—",
+                        },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="flex items-start justify-between gap-3 py-2 border-b border-[#F8FAFC] last:border-0"
+                        >
+                          <span className="text-xs text-[#64748B] flex-shrink-0 w-32">
+                            {label}
+                          </span>
+                          <span className="text-xs font-semibold text-[#0F172A] text-right">
+                            {value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <div className="flex items-center gap-3 px-6 py-4 border-b border-[#F1F5F9]">
+                      <div
+                        className="w-8 h-8 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: "#FDE68A" }}
+                      >
+                        <ImageIcon size={16} style={{ color: "#F59E0B" }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-[#0F172A]">
+                          Panel Image
+                        </p>
+                        <p className="text-xs text-[#64748B] mt-0.5">
+                          Free plan uploaded panel preview
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-5">
+                      {panel?.images?.frontImage ? (
+                        <div className="rounded-2xl border border-[#E5E7EB] bg-[#F8FAFC] p-3">
+                          <img
+                            src={panel.images.frontImage}
+                            alt="Panel preview"
+                            className="w-full max-h-[260px] rounded-2xl object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-10 text-center text-xs text-[#64748B]">
+                          No free plan panel image uploaded yet.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

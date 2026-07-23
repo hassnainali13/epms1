@@ -176,7 +176,13 @@ export interface AppState {
   loginUser: (
     email: string,
     password: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{
+    ok: boolean;
+    error?: string;
+    requiresEmailVerification?: boolean;
+    email?: string;
+    message?: string;
+  }>;
   loginAdmin: (
     email: string,
     password: string,
@@ -188,7 +194,7 @@ export interface AppState {
     password: string,
     companyName?: string,
     companyLogoUrl?: string,
-  ) => Promise<{ ok: boolean; error?: string }>;
+  ) => Promise<{ ok: boolean; error?: string; message?: string }>;
   upgradePlan: (userId: string) => Promise<void>;
   downgradePlan: (userId: string) => Promise<void>;
   blockUser: (userId: string) => Promise<void>;
@@ -336,6 +342,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return { ok: true };
     } catch (error) {
+      const status = (error as Error & { status?: number }).status;
+      const responseData = (error as Error & { responseData?: any })
+        .responseData;
+      if (status === 403 && responseData?.requiresVerification) {
+        return {
+          ok: false,
+          requiresEmailVerification: true,
+          email,
+          message:
+            responseData?.message ||
+            "Please verify your email before logging in.",
+        };
+      }
       return { ok: false, error: getAuthErrorMessage(error) };
     } finally {
       stopLoading();
@@ -436,27 +455,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         companyName,
         companyLogoUrl,
       });
-      const { token, user } = response.data;
-      localStorage.setItem("epms_token", token);
-      const mappedUser: User = {
-        id: user.id || user._id,
-        ...user,
-        name: user.name,
-        email: user.email,
-        plan: user.plan || "FREE",
-        blocked: Boolean(user.blocked),
-        joinedAt: user.createdAt
-          ? new Date(user.createdAt).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
-        panels: [],
-        monthlySpend: 0,
-      };
-      setCurrentUser(mappedUser);
+      localStorage.removeItem("epms_token");
+      localStorage.removeItem("epms_refresh_token");
+      setCurrentUser(null);
       setIsAdmin(false);
-      setView("dashboard");
-      return { ok: true };
+      setView("login");
+      return {
+        ok: true,
+        message: response?.data?.message || "Verification email sent.",
+      };
     } catch (error) {
-      return { ok: false, error: getAuthErrorMessage(error) };
+      const message = getAuthErrorMessage(error);
+      const responseData = (error as Error & { responseData?: any })
+        .responseData;
+      const serverMessage = responseData?.error || responseData?.message;
+      return {
+        ok: false,
+        error: serverMessage || message || "Registration failed.",
+      };
     } finally {
       stopLoading();
     }
