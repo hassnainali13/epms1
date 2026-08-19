@@ -131,6 +131,7 @@ export interface Panel {
   companyLogoUrl?: string;
   createdByName?: string;
   qrUrl?: string;
+<<<<<<< HEAD
   status:
     | "Draft"
     | "Installed"
@@ -138,6 +139,9 @@ export interface Panel {
     | "In Production"
     | "QC Review"
     | "Maintenance Due";
+=======
+  status: "Ready" | "Installed";
+>>>>>>> 709d1c4 (update instalation bugs fix)
   createdAt?: string;
   qrGenerated?: boolean;
   technicalSpecs?: PanelTechnicalSpecs;
