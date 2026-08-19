@@ -5,28 +5,10 @@ const statusConfig: Record<string, { bg: string; text: string; dot: string }> =
       text: "text-emerald-700",
       dot: "bg-emerald-500",
     },
-<<<<<<< HEAD
-    Pending: { bg: "bg-amber-50", text: "text-amber-700", dot: "bg-amber-500" },
-    "In Production": {
-      bg: "bg-blue-50",
-      text: "text-blue-700",
-      dot: "bg-blue-500",
-    },
-    "QC Review": {
-      bg: "bg-violet-50",
-      text: "text-violet-700",
-      dot: "bg-violet-500",
-    },
-    "Maintenance Due": {
-      bg: "bg-red-50",
-      text: "text-red-700",
-      dot: "bg-red-500",
-=======
     Ready: {
       bg: "bg-cyan-50",
       text: "text-cyan-700",
       dot: "bg-cyan-500",
->>>>>>> 709d1c4 (update instalation bugs fix)
     },
   };
 

@@ -18,7 +18,6 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     installationDate: "",
     installationLocation: "",
   });
-
   const hasInstallationDetails = Boolean(
     panel?.installer && panel?.installationDate && panel?.installationLocation,
   );
@@ -26,6 +25,11 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
   const canCompleteInstallation = Boolean(
     !hasInstallationDetails && panel?.status !== "Installed",
   );
+
+  const openPanelDetails = () => {
+    window.history.pushState({}, "", `/panels/${encodeURIComponent(panelId)}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
 
   const companyDisplayName = panel
     ? panel.companyName ||
@@ -40,7 +44,12 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
       try {
         setLoading(true);
         const res = await api.get(`/panels/public/${panelId}`);
-        setPanel(res.data.panel);
+        const nextPanel = res.data.panel as Panel;
+        if (nextPanel.status === "Installed") {
+          openPanelDetails();
+          return;
+        }
+        setPanel(nextPanel);
       } catch (err) {
         setError(
           err instanceof Error
@@ -88,7 +97,11 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
         },
       );
       setPanel(response.data.panel);
-      setMode("view");
+      if (response.data.panel.status === "Installed") {
+        openPanelDetails();
+      } else {
+        setMode("view");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Install update failed.");
     }
