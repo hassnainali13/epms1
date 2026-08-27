@@ -9,6 +9,8 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import api, { getAuthErrorMessage } from "../lib/api";
+import type { TemplateId } from "../components/templates";
+import { DEFAULT_TEMPLATE_ID } from "../components/templates";
 
 export type Plan = "FREE" | "PREMIUM";
 
@@ -165,6 +167,8 @@ export interface AppState {
   users: User[];
   subscriptionPrice: number;
   appLoading: boolean;
+  selectedTemplate: TemplateId;
+  setSelectedTemplate: (templateId: TemplateId) => void;
   startLoading: () => void;
   stopLoading: () => void;
   loginUser: (
@@ -211,7 +215,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [subscriptionPrice, setSubscriptionPriceState] = useState(49);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [appLoading, setAppLoading] = useState(false);
+  const [selectedTemplate, setSelectedTemplateState] = useState<TemplateId>(
+    () => {
+      // Load from localStorage on init
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("epms_selectedTemplate");
+        return (stored as TemplateId) || DEFAULT_TEMPLATE_ID;
+      }
+      return DEFAULT_TEMPLATE_ID;
+    },
+  );
   const loadingCountRef = useRef(0);
+
+  const setSelectedTemplate = useCallback((templateId: TemplateId) => {
+    setSelectedTemplateState(templateId);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("epms_selectedTemplate", templateId);
+    }
+  }, []);
 
   const startLoading = useCallback(() => {
     loadingCountRef.current += 1;
@@ -578,6 +599,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       users,
       subscriptionPrice,
       appLoading,
+      selectedTemplate,
+      setSelectedTemplate,
       startLoading,
       stopLoading,
       loginUser,
@@ -601,6 +624,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       users,
       subscriptionPrice,
       appLoading,
+      selectedTemplate,
+      setSelectedTemplate,
       isAuthReady,
     ],
   );

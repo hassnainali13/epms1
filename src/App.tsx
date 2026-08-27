@@ -7,6 +7,7 @@ import PanelQrPage from "./components/PanelQrPage";
 import PanelWizard from "./components/PanelWizard";
 import PanelCreatedSuccess from "./components/PanelCreatedSuccess";
 import PanelDetails from "./components/PanelDetails";
+import QRCodeTemplatesPage from "./components/QRCodeTemplatesPage";
 import AppLoader from "./components/AppLoader";
 
 function AppRouter() {
@@ -45,6 +46,8 @@ function AppRouter() {
   if (normalizedPath.startsWith("/panel/")) {
     const panelId = normalizedPath.replace("/panel/", "").replace(/\/$/, "");
     content = <PanelQrPage panelId={panelId} />;
+  } else if (normalizedPath === "/qr-code-templates") {
+    content = <QRCodeTemplatesPage />;
   } else if (normalizedPath.startsWith("/panels/edit/")) {
     const panelId = normalizedPath
       .replace("/panels/edit/", "")

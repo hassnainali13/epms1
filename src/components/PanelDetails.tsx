@@ -171,6 +171,15 @@ function getPanelBadge(panel?: PanelRecord) {
   return shortened || "PANEL";
 }
 
+function formatPanelRatingValue(value: unknown, unit: string) {
+  if (value === undefined || value === null || value === "") return null;
+  const withoutUnit = String(value)
+    .trim()
+    .replace(new RegExp(`\\s*${unit}\\s*$`, "i"), "")
+    .trim();
+  return `${withoutUnit}${unit}`;
+}
+
 function buildPanelRating(panel?: PanelRecord) {
   const voltage = panel?.technicalSpecs?.voltage;
   const current = panel?.technicalSpecs?.current;
@@ -178,9 +187,9 @@ function buildPanelRating(panel?: PanelRecord) {
   const powerRating = panel?.technicalSpecs?.powerRating;
 
   const parts = [
-    powerRating ? `${powerRating} kW` : null,
-    current ? `${current} A` : null,
-    voltage ? `${voltage} V` : null,
+    formatPanelRatingValue(powerRating, "KW"),
+    formatPanelRatingValue(current, "A"),
+    formatPanelRatingValue(voltage, "V"),
     phase ? phase : null,
   ].filter(Boolean);
 

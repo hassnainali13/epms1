@@ -195,6 +195,31 @@ const INITIAL: FormData = {
   diagrams: [],
 };
 
+function formatTechnicalValue(value: string, unit: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return "";
+
+  const unitPattern =
+    unit === "inches"
+      ? /\s*(?:mm|inches?|in)\s*$/i
+      : unit === "mm"
+        ? /\s*mm(?:²|2)?\s*$/i
+        : new RegExp(`\\s*${unit}\\s*$`, "i");
+  const withoutUnit = trimmedValue.replace(unitPattern, "").trim();
+  return `${withoutUnit}${unit}`;
+}
+
+function formatControlVoltage(value: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return "";
+  if (/V\s*[~=]/i.test(trimmedValue)) return trimmedValue;
+
+  const numericValue = trimmedValue.replace(/\s*V(?:\s*DC)?\s*$/i, "");
+  if (!/^\d+(?:\.\d+)?$/.test(numericValue.trim())) return trimmedValue;
+
+  return `${numericValue.trim()}V${numericValue.trim() === "24" ? "=" : "~"}`;
+}
+
 const PANEL_TYPES = [
   "MCC (Motor Control Center)",
   "Distribution Board",
@@ -208,14 +233,7 @@ const PANEL_TYPES = [
   "Feeder Pillar",
 ];
 
-const PANEL_STATUSES = [
-  "Draft",
-  "In Production",
-  "QC Review",
-  "Ready",
-  "Installed",
-  "Maintenance Due",
-];
+const PANEL_STATUSES = ["Ready", "Installed"];
 const IP_RATINGS = [
   "IP20",
   "IP30",
@@ -589,27 +607,18 @@ function Step1({
               icon={FileText}
             />
           </div>
-          <div className="md:col-span-2">
-            <Label required>Installation Location</Label>
-            <Input
-              value={data.installationLocation}
-              onChange={(v) => set("installationLocation", v)}
-              placeholder="e.g. Building A, Electrical Room, Floor 3 — Dubai, UAE"
-              icon={MapPin}
-            />
-          </div>
         </div>
       </div>
 
       {/* Divider */}
       <div className="border-t border-[#F1F5F9]" />
 
-      {/* Manufacturer & Installation */}
+      {/* Manufacturing Details */}
       <div>
         <SectionTitle
           icon={Factory}
-          title="Manufacturer & Installation"
-          subtitle="Personnel and schedule information"
+          title="Manufacturing Details"
+          subtitle="Information about the panel manufacturer and production"
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
@@ -621,6 +630,31 @@ function Step1({
               icon={Factory}
             />
           </div>
+          <div>
+            <Label>Manufacturing Date</Label>
+            <div className="relative">
+              <Input value={data.manufacturingDate} readOnly icon={Calendar} />
+              <div className="absolute -top-0.5 right-0">
+                <span className="text-[10px] font-medium text-[#94A3B8] bg-[#F1F5F9] px-2 py-0.5 rounded-md">
+                  Auto-filled
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-[#F1F5F9]" />
+
+      {/* Installation Details */}
+      <div>
+        <SectionTitle
+          icon={MapPin}
+          title="Installation Details"
+          subtitle="Personnel, location, and schedule information"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <Label>Installer Name</Label>
             <Input
@@ -639,17 +673,29 @@ function Step1({
               icon={Calendar}
             />
           </div>
-          <div>
-            <Label>Manufacturing Date</Label>
-            <div className="relative">
-              <Input value={data.manufacturingDate} readOnly icon={Calendar} />
-              <div className="absolute -top-0.5 right-0">
-                <span className="text-[10px] font-medium text-[#94A3B8] bg-[#F1F5F9] px-2 py-0.5 rounded-md">
-                  Auto-filled
-                </span>
-              </div>
-            </div>
+          <div className="md:col-span-2">
+            <Label>Installation Location</Label>
+            <Input
+              value={data.installationLocation}
+              onChange={(v) => set("installationLocation", v)}
+              placeholder="e.g. Building A, Electrical Room, Floor 3 — Dubai, UAE"
+              icon={MapPin}
+            />
           </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-[#F1F5F9]" />
+
+      {/* Description */}
+      <div>
+        <SectionTitle
+          icon={FileText}
+          title="Description"
+          subtitle="Add any additional panel notes"
+        />
+        <div>
           <div className="md:col-span-2">
             <Label>Description</Label>
             <Textarea
@@ -792,11 +838,11 @@ function Step2({
           {isPremium && (
             <>
               <div>
-                <Label>Control Voltage</Label>
+                <Label>Control Voltage (220V~ / 24V=)</Label>
                 <Input
                   value={data.controlVoltage}
                   onChange={(v) => set("controlVoltage", v)}
-                  placeholder="e.g. 24V DC"
+                  placeholder="e.g. 220 or 24"
                   icon={Zap}
                 />
               </div>
@@ -828,16 +874,16 @@ function Step2({
                 />
               </div>
               <div>
-                <Label>Dimensions (L × W × H mm)</Label>
+                <Label>Dimensions (L × W × H inches)</Label>
                 <Input
                   value={data.dimensions}
                   onChange={(v) => set("dimensions", v)}
-                  placeholder="e.g. 2000 × 800 × 600"
+                  placeholder="e.g. 78 × 31 × 24"
                   icon={Package}
                 />
               </div>
               <div>
-                <Label>Weight (kg)</Label>
+                <Label>Weight (KG)</Label>
                 <Input
                   value={data.weight}
                   onChange={(v) => set("weight", v)}
@@ -855,11 +901,11 @@ function Step2({
                 />
               </div>
               <div>
-                <Label>Cable Size</Label>
+                <Label>Cable Size (mm)</Label>
                 <Input
                   value={data.cableSize}
                   onChange={(v) => set("cableSize", v)}
-                  placeholder="e.g. 3x70 mm²"
+                  placeholder="e.g. 3x70"
                   icon={FileText}
                 />
               </div>
@@ -956,7 +1002,7 @@ function Step2({
         </div>
       </div>
 
-      {isPremium && instrumentCategories.length > 0 && (
+      {isPremium && (
         <>
           <div className="border-t border-[#F1F5F9]" />
 
@@ -966,21 +1012,32 @@ function Step2({
               title="Instrument Quantities"
               subtitle="Quantities are pulled from Instrument Master categories"
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {instrumentCategories.map((category) => (
-                <div key={category}>
-                  <Label>{category}</Label>
-                  <Input
-                    value={data.instrumentCategoryQuantities?.[category] || "0"}
-                    onChange={(v) => setInstrumentCategoryQuantity(category, v)}
-                    placeholder="0"
-                    icon={Package}
-                    type="text"
-                    inputMode="numeric"
-                  />
-                </div>
-              ))}
-            </div>
+            {instrumentCategories.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {instrumentCategories.map((category) => (
+                  <div key={category}>
+                    <Label>{category}</Label>
+                    <Input
+                      value={
+                        data.instrumentCategoryQuantities?.[category] || "0"
+                      }
+                      onChange={(v) =>
+                        setInstrumentCategoryQuantity(category, v)
+                      }
+                      placeholder="0"
+                      icon={Package}
+                      type="text"
+                      inputMode="numeric"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="rounded-xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] px-4 py-5 text-sm text-[#64748B]">
+                No instrument categories are available. Add instruments in
+                Instrument Master first.
+              </p>
+            )}
           </div>
         </>
       )}
@@ -1947,15 +2004,15 @@ function Step4({
     { label: "Power Factor", value: data.powerFactor },
     ...(isPremium
       ? [
-          { label: "Control Voltage", value: data.controlVoltage },
+          {
+            label: "Control Voltage",
+            value: formatControlVoltage(data.controlVoltage),
+          },
           { label: "IP Rating", value: data.ipRating },
           { label: "Enclosure Material", value: data.enclosureMaterial },
           { label: "Panel Color", value: data.panelColor },
-          {
-            label: "Dimensions",
-            value: data.dimensions ? `${data.dimensions} mm` : "",
-          },
-          { label: "Weight", value: data.weight ? `${data.weight} kg` : "" },
+          { label: "Dimensions", value: data.dimensions },
+          { label: "Weight", value: data.weight },
           { label: "Mounting Type", value: data.mountingType },
           { label: "Cable Size", value: data.cableSize },
           { label: "Control Cable Size", value: data.controlCableSize },
@@ -2171,9 +2228,11 @@ function Step4({
 function Stepper({
   current,
   steps,
+  onStepClick,
 }: {
   current: number;
   steps: typeof BASE_STEPS;
+  onStepClick?: (stepIndex: number) => void;
 }) {
   return (
     <div className="flex items-center justify-between relative">
@@ -2186,9 +2245,10 @@ function Stepper({
         }}
       />
 
-      {steps.map((step) => {
-        const done = step.id < current;
-        const active = step.id === current;
+      {steps.map((step, stepIndex) => {
+        const position = stepIndex + 1;
+        const done = position < current;
+        const active = position === current;
         const Icon = step.icon;
 
         return (
@@ -2196,36 +2256,44 @@ function Stepper({
             key={step.id}
             className="relative z-10 flex flex-col items-center gap-2.5 flex-1"
           >
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                done
-                  ? "bg-[#1DA1F2] border-[#1DA1F2]"
-                  : active
-                    ? "bg-white border-[#1DA1F2] shadow-[0_0_0_4px_rgba(29,161,242,0.12)]"
-                    : "bg-white border-[#E5E7EB]"
-              }`}
+            <button
+              type="button"
+              onClick={() => onStepClick?.(stepIndex)}
+              disabled={!onStepClick}
+              className="flex flex-col items-center gap-2.5 disabled:cursor-default"
+              aria-label={`Go to ${step.label}`}
             >
-              {done ? (
-                <Check size={13} className="text-white" strokeWidth={2.5} />
-              ) : (
-                <Icon
-                  size={13}
-                  className={active ? "text-[#1DA1F2]" : "text-[#CBD5E1]"}
-                />
-              )}
-            </div>
-            <div className="text-center hidden sm:block">
-              <p
-                className={`text-[11px] font-semibold leading-tight ${active ? "text-[#1DA1F2]" : done ? "text-[#0F172A]" : "text-[#94A3B8]"}`}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                  done
+                    ? "bg-[#1DA1F2] border-[#1DA1F2]"
+                    : active
+                      ? "bg-white border-[#1DA1F2] shadow-[0_0_0_4px_rgba(29,161,242,0.12)]"
+                      : "bg-white border-[#E5E7EB]"
+                }`}
               >
-                Step {step.id}
-              </p>
-              <p
-                className={`text-[11px] leading-tight mt-0.5 ${active ? "text-[#0F172A]" : "text-[#94A3B8]"}`}
-              >
-                {step.label}
-              </p>
-            </div>
+                {done ? (
+                  <Check size={13} className="text-white" strokeWidth={2.5} />
+                ) : (
+                  <Icon
+                    size={13}
+                    className={active ? "text-[#1DA1F2]" : "text-[#CBD5E1]"}
+                  />
+                )}
+              </div>
+              <div className="text-center hidden sm:block">
+                <p
+                  className={`text-[11px] font-semibold leading-tight ${active ? "text-[#1DA1F2]" : done ? "text-[#0F172A]" : "text-[#94A3B8]"}`}
+                >
+                  Step {step.id}
+                </p>
+                <p
+                  className={`text-[11px] leading-tight mt-0.5 ${active ? "text-[#0F172A]" : "text-[#94A3B8]"}`}
+                >
+                  {step.label}
+                </p>
+              </div>
+            </button>
           </div>
         );
       })}
@@ -2236,16 +2304,12 @@ function Stepper({
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
-  Draft: "bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0]",
-  "In Production": "bg-blue-50 text-blue-700 border-blue-200",
-  "QC Review": "bg-violet-50 text-violet-700 border-violet-200",
   Ready: "bg-cyan-50 text-cyan-700 border-cyan-200",
   Installed: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Maintenance Due": "bg-red-50 text-red-700 border-red-200",
 };
 
 function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_STYLES[status] ?? STATUS_STYLES["Draft"];
+  const cls = STATUS_STYLES[status] ?? STATUS_STYLES.Ready;
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cls}`}
@@ -2372,7 +2436,9 @@ export default function CreatePanelWizard({
           manufacturerName: panel.manufacturer || "",
           installerName: panel.installer || "",
           installationDate: panel.installationDate || "",
-          panelStatus: panel.status || "Draft",
+          panelStatus: ["Ready", "Installed"].includes(panel.status)
+            ? panel.status
+            : "Ready",
           description: panel.description || "",
           manufacturingDate: panel.manufacturingDate || "",
 
@@ -2623,6 +2689,12 @@ export default function CreatePanelWizard({
     setStep((s) => Math.max(s - 1, 1));
   }
 
+  function handleStepClick(stepIndex: number) {
+    if (!isEditMode) return;
+    setErrors([]);
+    setStep(stepIndex + 1);
+  }
+
   // When entering the final review step, request an authoritative panel ID
 
   async function handleSubmit() {
@@ -2759,11 +2831,11 @@ export default function CreatePanelWizard({
         status: data.panelStatus,
         motorConfiguration: data.motorConfiguration,
         technicalSpecs: {
-          voltage: data.voltage,
-          current: data.current,
-          frequency: data.frequency,
+          voltage: formatTechnicalValue(data.voltage, "V"),
+          current: formatTechnicalValue(data.current, "A"),
+          frequency: formatTechnicalValue(data.frequency, "Hz"),
           phase: data.phase,
-          powerRating: data.powerRating,
+          powerRating: formatTechnicalValue(data.powerRating, "KW"),
           powerFactor: data.powerFactor,
           mccb: data.mccb,
           mcb: data.mcb,
@@ -2791,7 +2863,7 @@ export default function CreatePanelWizard({
           indicatorLamps: data.indicatorLamps,
           busbarRating: data.busbarRating,
           busbarMaterial: data.busbarMaterial,
-          cableSize: data.cableSize,
+          cableSize: formatTechnicalValue(data.cableSize, "mm"),
           controlCableSize: data.controlCableSize,
           overCurrentProtection: data.overCurrentProtection,
           shortCircuitProtection: data.shortCircuitProtection,
@@ -2801,13 +2873,13 @@ export default function CreatePanelWizard({
           underVoltageProtection: data.underVoltageProtection,
           dryRunProtection: data.dryRunProtection,
           overloadProtection: data.overloadProtection,
-          controlVoltage: data.controlVoltage,
+          controlVoltage: formatControlVoltage(data.controlVoltage),
           ipRating: data.ipRating,
           enclosureMaterial: data.enclosureMaterial,
           instrumentQuantities: data.instrumentCategoryQuantities,
           panelColor: data.panelColor,
-          dimensions: data.dimensions,
-          weight: data.weight,
+          dimensions: formatTechnicalValue(data.dimensions, "inches"),
+          weight: formatTechnicalValue(data.weight, "KG"),
           mountingType: data.mountingType,
           drawingNumber: data.drawingNumber,
           revision: data.revision,
@@ -2840,7 +2912,7 @@ export default function CreatePanelWizard({
 
   if (submitted) {
     return (
-      <div className="w-full max-w-[1100px] flex items-center justify-center min-h-[70vh]">
+      <div className="w-full min-h-screen flex items-center justify-center px-6 py-8">
         <div className="bg-white rounded-3xl border border-[#E5E7EB] shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-14 text-center max-w-md w-full">
           <div className="w-16 h-16 rounded-full bg-[#F0FFF4] border-4 border-[#BBF7D0] flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={30} className="text-[#16A34A]" />
@@ -2863,22 +2935,40 @@ export default function CreatePanelWizard({
               </p>
             </div>
           )}
-          <button
-            onClick={() => {
-              if (isEditMode) {
+          {isEditMode ? (
+            <button
+              onClick={() => {
                 window.history.pushState({}, "", "/");
                 window.dispatchEvent(new PopStateEvent("popstate"));
-                return;
-              }
-              setSubmitted(false);
-              setStep(1);
-              setData(INITIAL);
-              setErrors([]);
-            }}
-            className="w-full h-11 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-semibold text-sm rounded-xl transition-colors"
-          >
-            {isEditMode ? "Return to Panels" : "Create Another Panel"}
-          </button>
+              }}
+              className="w-full h-11 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              Return to Panels
+            </button>
+          ) : (
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setSubmitted(false);
+                  setStep(1);
+                  setData(INITIAL);
+                  setErrors([]);
+                }}
+                className="w-full h-11 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-semibold text-sm rounded-xl transition-colors"
+              >
+                Create Another Panel
+              </button>
+              <button
+                onClick={() => {
+                  window.history.pushState({}, "", "/");
+                  window.dispatchEvent(new PopStateEvent("popstate"));
+                }}
+                className="w-full h-11 bg-white hover:bg-[#F8FAFC] border border-[#E5E7EB] text-[#475569] font-semibold text-sm rounded-xl transition-colors"
+              >
+                Back to Dashboard
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -2968,7 +3058,11 @@ export default function CreatePanelWizard({
 
         {/* ── Stepper ── */}
         <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] px-8 py-6 mb-5">
-          <Stepper current={step} steps={visibleSteps} />
+          <Stepper
+            current={step}
+            steps={visibleSteps}
+            onStepClick={isEditMode ? handleStepClick : undefined}
+          />
         </div>
 
         {/* ── Validation errors ── */}

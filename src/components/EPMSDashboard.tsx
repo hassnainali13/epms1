@@ -56,6 +56,7 @@ const navItems = [
   { icon: Users, label: "Employees", id: "employees" },
   { icon: UserCheck, label: "Customers", id: "customers" },
   { icon: MapPin, label: "Installations", id: "installations" },
+  { icon: QrCode, label: "QR Code Templates", id: "qr-templates" },
   { icon: QrCode, label: "QR Codes", id: "qrcodes" },
   { icon: FileText, label: "Diagrams", id: "diagrams" },
   { icon: BarChart3, label: "Reports", id: "reports" },
@@ -193,6 +194,11 @@ export default function EPMSDashboard() {
                         triggerUpgrade(
                           "Premium Reports are not available on the Free plan.",
                         );
+                        return;
+                      }
+                      if (id === "qr-templates") {
+                        window.history.pushState({}, "", "/qr-code-templates");
+                        window.dispatchEvent(new PopStateEvent("popstate"));
                         return;
                       }
                       setActiveNav(id);
