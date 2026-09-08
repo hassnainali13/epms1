@@ -53,6 +53,11 @@ function AppRouter() {
       .replace("/panels/edit/", "")
       .replace(/\/$/, "");
     content = <PanelWizard mode="edit" panelId={panelId} />;
+  } else if (normalizedPath.startsWith("/panels/duplicate/")) {
+    const panelId = normalizedPath
+      .replace("/panels/duplicate/", "")
+      .replace(/\/$/, "");
+    content = <PanelWizard mode="duplicate" panelId={panelId} />;
   } else if (normalizedPath === "/panels/create") {
     content = <PanelWizard />;
   } else if (normalizedPath.startsWith("/panels/success/")) {

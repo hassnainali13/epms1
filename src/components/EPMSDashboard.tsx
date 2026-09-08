@@ -118,6 +118,7 @@ export default function EPMSDashboard() {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
   const [showSearch, setShowSearch] = useState(false);
+  const [showDuplicatePicker, setShowDuplicatePicker] = useState(false);
   const [qrPanelId, setQrPanelId] = useState<string | null>(null);
   const showDashboardOverview =
     activeNav === "dashboard" || activeNav === "panels";
@@ -649,6 +650,27 @@ export default function EPMSDashboard() {
                         )}
                       </button>
 
+                      {/* Duplicate Panel */}
+                      <button
+                        onClick={() => setShowDuplicatePicker(true)}
+                        disabled={panels.length === 0 || panelLimitReached}
+                        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-xl border transition-all text-sm font-medium ${
+                          panels.length === 0 || panelLimitReached
+                            ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#CBD5E1] cursor-not-allowed"
+                            : "border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] text-[#0F172A]"
+                        }`}
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${panels.length === 0 || panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#14B8A6]"}`}
+                        >
+                          <FileText
+                            size={17}
+                            className={panels.length === 0 || panelLimitReached ? "text-[#CBD5E1]" : "text-white"}
+                          />
+                        </div>
+                        <span>Duplicate Panel Create</span>
+                      </button>
+
                       {/* Search Panel */}
                       <button
                         onClick={() => setShowSearch(true)}
@@ -1088,6 +1110,55 @@ export default function EPMSDashboard() {
           onClose={() => setShowSearch(false)}
           panels={panels}
         />
+      )}
+      {showDuplicatePicker && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4"
+          onClick={() => setShowDuplicatePicker(false)}
+        >
+          <div
+            className="bg-white rounded-2xl border border-[#E5E7EB] shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#E5E7EB]">
+              <div>
+                <h2 className="text-base font-bold text-[#0F172A]">Select Panel to Duplicate</h2>
+                <p className="text-xs text-[#64748B] mt-1">Images will not be copied to the new panel.</p>
+              </div>
+              <button
+                onClick={() => setShowDuplicatePicker(false)}
+                className="p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9]"
+                title="Close"
+              >
+                <X size={17} />
+              </button>
+            </div>
+            <div className="p-3 overflow-y-auto max-h-[60vh] space-y-2">
+              {panels.map((panel) => {
+                const panelId = panel.panelId || panel.id;
+                return (
+                  <button
+                    key={panelId}
+                    disabled={!panelId}
+                    onClick={() => {
+                      if (!panelId) return;
+                      window.history.pushState({}, "", `/panels/duplicate/${panelId}`);
+                      window.dispatchEvent(new PopStateEvent("popstate"));
+                    }}
+                    className="w-full text-left px-4 py-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-colors"
+                  >
+                    <p className="text-sm font-semibold text-[#0F172A] truncate">
+                      {panel.panelName || panel.name || "Unnamed panel"}
+                    </p>
+                    <p className="text-[11px] text-[#64748B] mt-1">
+                      {panelId} {panel.customer ? `· ${panel.customer}` : ""}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       )}
       {profileOpen && (
         <div

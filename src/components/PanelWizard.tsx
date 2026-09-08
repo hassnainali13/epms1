@@ -2346,7 +2346,7 @@ function validateStep(step: number, data: FormData): string[] {
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
 interface PanelWizardProps {
-  mode?: "create" | "edit";
+  mode?: "create" | "edit" | "duplicate";
   panelId?: string;
 }
 
@@ -2395,6 +2395,7 @@ export default function CreatePanelWizard({
   const [loadingPanel, setLoadingPanel] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const isEditMode = mode === "edit";
+  const isDuplicateMode = mode === "duplicate";
   const currentStep = visibleSteps[step - 1];
   const panelId = isEditMode
     ? existingPanelId || editPanelId || ""
@@ -2413,9 +2414,9 @@ export default function CreatePanelWizard({
     Record<string, { company?: string; model?: string }[]>
   >({});
 
-  // load existing panel data when in edit mode
+  // Load source data for edit and duplicate flows.
   useEffect(() => {
-    if (!isEditMode || !editPanelId) return;
+    if ((!isEditMode && !isDuplicateMode) || !editPanelId) return;
     const panelLookupId = editPanelId as string;
     let mounted = true;
     async function loadPanel() {
@@ -2440,7 +2441,9 @@ export default function CreatePanelWizard({
             ? panel.status
             : "Ready",
           description: panel.description || "",
-          manufacturingDate: panel.manufacturingDate || "",
+          manufacturingDate: isDuplicateMode
+            ? new Date().toISOString().split("T")[0]
+            : panel.manufacturingDate || "",
 
           voltage: panel.technicalSpecs?.voltage || "",
           current: panel.technicalSpecs?.current || "",
@@ -2514,15 +2517,17 @@ export default function CreatePanelWizard({
           insideImage: null,
           namePlateImage: null,
           sideImage: null,
-          diagrams: (panel.diagrams || []).map((diagram: any) => ({
-            name: diagram.name || "",
-            file: null,
-            existingUrl: diagram.url || "",
-            fileType: diagram.fileType || "",
-            publicId: diagram.publicId || "",
-            source: diagram.source || "upload",
-            libraryId: diagram.libraryId || "",
-          })),
+          diagrams: isDuplicateMode
+            ? []
+            : (panel.diagrams || []).map((diagram: any) => ({
+                name: diagram.name || "",
+                file: null,
+                existingUrl: diagram.url || "",
+                fileType: diagram.fileType || "",
+                publicId: diagram.publicId || "",
+                source: diagram.source || "upload",
+                libraryId: diagram.libraryId || "",
+              })),
         };
 
         if (
@@ -2557,12 +2562,16 @@ export default function CreatePanelWizard({
         setData(nextData);
         setExistingPanelId(panel.panelId || editPanelId || null);
         setExistingInternalId(panel._id || panel.id || null);
-        setExistingImages({
-          frontImage: panel.images?.frontImage || "",
-          insideImage: panel.images?.insideImage || "",
-          namePlateImage: panel.images?.namePlateImage || "",
-          sideImage: panel.images?.sideImage || "",
-        });
+        setExistingImages(
+          isDuplicateMode
+            ? {}
+            : {
+                frontImage: panel.images?.frontImage || "",
+                insideImage: panel.images?.insideImage || "",
+                namePlateImage: panel.images?.namePlateImage || "",
+                sideImage: panel.images?.sideImage || "",
+              },
+        );
       } catch (error) {
         if (!mounted) return;
         setLoadError(
@@ -2576,7 +2585,7 @@ export default function CreatePanelWizard({
     return () => {
       mounted = false;
     };
-  }, [editPanelId, isEditMode, isPremium]);
+  }, [editPanelId, isDuplicateMode, isEditMode, isPremium]);
 
   // load instrument master once for instrument models step
   useEffect(() => {
@@ -2690,7 +2699,7 @@ export default function CreatePanelWizard({
   }
 
   function handleStepClick(stepIndex: number) {
-    if (!isEditMode) return;
+    if (!isEditMode && !isDuplicateMode) return;
     setErrors([]);
     setStep(stepIndex + 1);
   }
@@ -2760,16 +2769,16 @@ export default function CreatePanelWizard({
         .filter(Boolean);
 
       const imagePayload: Record<string, string> = {
-        ...(existingImages.frontImage
+        ...(isEditMode && existingImages.frontImage
           ? { frontImage: existingImages.frontImage }
           : {}),
-        ...(existingImages.insideImage
+        ...(isEditMode && existingImages.insideImage
           ? { insideImage: existingImages.insideImage }
           : {}),
-        ...(existingImages.namePlateImage
+        ...(isEditMode && existingImages.namePlateImage
           ? { namePlateImage: existingImages.namePlateImage }
           : {}),
-        ...(existingImages.sideImage
+        ...(isEditMode && existingImages.sideImage
           ? { sideImage: existingImages.sideImage }
           : {}),
         ...(frontImage ? { frontImage } : {}),
@@ -3061,7 +3070,7 @@ export default function CreatePanelWizard({
           <Stepper
             current={step}
             steps={visibleSteps}
-            onStepClick={isEditMode ? handleStepClick : undefined}
+            onStepClick={isEditMode || isDuplicateMode ? handleStepClick : undefined}
           />
         </div>
 

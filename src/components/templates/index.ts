@@ -4,8 +4,11 @@ import SpecificationTemplate01, {
 import SpecificationTemplate02, {
   createSpecificationTemplate02Pdf,
 } from "./SpecificationTemplate02";
+import SpecificationTemplate03, {
+  createSpecificationTemplate03Pdf,
+} from "./SpecificationTemplate03";
 
-export type TemplateId = "template_01" | "template_02";
+export type TemplateId = "template_01" | "template_02" | "template-03";
 
 export interface TemplateInfo {
   id: TemplateId;
@@ -44,6 +47,18 @@ export const TEMPLATES: Record<TemplateId, TemplateInfo> = {
     },
     component: SpecificationTemplate02,
     pdfGenerator: createSpecificationTemplate02Pdf,
+  },
+  "template-03": {
+    id: "template-03",
+    name: "Template 3",
+    description: "Blue Landscape Specification Sheet with Ribbon Design",
+    orientation: "landscape",
+    dimensions: {
+      width: "8 inches",
+      height: "4.5 inches",
+    },
+    component: SpecificationTemplate03,
+    pdfGenerator: createSpecificationTemplate03Pdf,
   },
 };
 
