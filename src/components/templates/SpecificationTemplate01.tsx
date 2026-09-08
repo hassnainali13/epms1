@@ -175,7 +175,6 @@ export async function createSpecificationTemplate01Pdf(
     { label: "Panel ID", value: panel?.panelId || panel?.id || "—" },
     { label: "Panel Name", value: panel?.panelName || panel?.name || "—" },
     { label: "Panel Type", value: panel?.panelType || panel?.type || "—" },
-    { label: "Status", value: panel?.status || "—" },
     { label: "Customer", value: panel?.customer || "—" },
     { label: "Project", value: panel?.projectName || "—" },
   ];
@@ -464,7 +463,6 @@ export default function SpecificationTemplate01({
                           label: "Panel Type",
                           value: panel?.panelType || panel?.type || "—",
                         },
-                        { label: "Status", value: panel?.status || "—" },
                         { label: "Customer", value: panel?.customer || "—" },
                         { label: "Project", value: panel?.projectName || "—" },
                       ].map(({ label, value }) => (
@@ -668,7 +666,6 @@ export default function SpecificationTemplate01({
                           label: "Panel Type",
                           value: panel?.panelType || panel?.type || "—",
                         },
-                        { label: "Status", value: panel?.status || "—" },
                         { label: "Customer", value: panel?.customer || "—" },
                         { label: "Project", value: panel?.projectName || "—" },
                       ].map(({ label, value }) => (
