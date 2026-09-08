@@ -56,7 +56,7 @@ const getSpecItems = (panel?: Panel): SpecItem[] => [
   { label: "Weight", value: panel?.technicalSpecs?.weight || "-", icon: Scale },
   { label: "Mounting Type", value: panel?.technicalSpecs?.mountingType || "-", icon: Anchor },
   { label: "Cable Size", value: panel?.technicalSpecs?.cableSize || "-", icon: Cable },
-  { label: "Control Cable Size", value: panel?.technicalSpecs?.controlCableSize || "-", icon: Cable },
+  { label: "Motor Quantity", value: `${panel?.motorConfiguration?.length || 0}`, icon: Cable },
 ];
 
 async function waitForImages(root: HTMLElement): Promise<void> {

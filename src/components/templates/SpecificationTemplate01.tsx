@@ -245,8 +245,8 @@ export async function createSpecificationTemplate01Pdf(
     },
     { label: "Cable Size", value: panel?.technicalSpecs?.cableSize || "—" },
     {
-      label: "Control Cable Size",
-      value: panel?.technicalSpecs?.controlCableSize || "—",
+      label: "Motor Quantity",
+      value: `${panel?.motorConfiguration?.length || 0}`,
     },
   ];
 
@@ -563,8 +563,8 @@ export default function SpecificationTemplate01({
                           value: panel?.technicalSpecs?.cableSize || "—",
                         },
                         {
-                          label: "Control Cable Size",
-                          value: panel?.technicalSpecs?.controlCableSize || "—",
+                          label: "Motor Quantity",
+                          value: `${panel?.motorConfiguration?.length || 0}`,
                         },
                       ].map(({ label, value }) => (
                         <div
@@ -767,8 +767,8 @@ export default function SpecificationTemplate01({
                           value: panel?.technicalSpecs?.cableSize || "—",
                         },
                         {
-                          label: "Control Cable Size",
-                          value: panel?.technicalSpecs?.controlCableSize || "—",
+                          label: "Motor Quantity",
+                          value: `${panel?.motorConfiguration?.length || 0}`,
                         },
                       ].map(({ label, value }) => (
                         <div

@@ -23,9 +23,14 @@ function parseSavedEntry(entry: unknown) {
       return {
         company: normalizeString(company) || "Unknown company",
         model: normalizeString(modelParts.join("::")) || "Unknown model",
+        quantity: 1,
       };
     }
-    return { company: "Unknown company", model: trimmed || "Unknown model" };
+    return {
+      company: "Unknown company",
+      model: trimmed || "Unknown model",
+      quantity: 1,
+    };
   }
 
   if (entry && typeof entry === "object") {
@@ -36,10 +41,16 @@ function parseSavedEntry(entry: unknown) {
     const model =
       normalizeString(rec.model || rec.modelName || rec.name) ||
       "Unknown model";
-    return { company, model };
+    return {
+      company,
+      model,
+      quantity: Number.isFinite(Number(rec.quantity))
+        ? Math.max(1, Number(rec.quantity))
+        : 1,
+    };
   }
 
-  return { company: "Unknown company", model: "Unknown model" };
+  return { company: "Unknown company", model: "Unknown model", quantity: 1 };
 }
 
 export function groupSavedInstrumentModels(
@@ -54,9 +65,9 @@ export function groupSavedInstrumentModels(
       const counts = new Map<string, number>();
 
       entries.forEach((entry) => {
-        const { company, model } = parseSavedEntry(entry);
+        const { company, model, quantity = 1 } = parseSavedEntry(entry);
         const key = `${company}::${model}`;
-        counts.set(key, (counts.get(key) || 0) + 1);
+        counts.set(key, (counts.get(key) || 0) + quantity);
       });
 
       const items: ReviewInstrumentItem[] = Array.from(counts.entries()).map(

@@ -16,10 +16,6 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
-
-import type { LucideIcon } from "lucide-react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import type { Panel } from "../../context/AppContext";
 
 let template02CaptureElement: HTMLDivElement | null = null;
@@ -113,8 +109,8 @@ const getSpecItems = (panel?: Panel): SpecItem[] => [
     icon: Cable,
   },
   {
-    label: "Control Cable Size",
-    value: panel?.technicalSpecs?.controlCableSize || "-",
+    label: "Motor Quantity",
+    value: `${panel?.motorConfiguration?.length || 0}`,
     icon: Cable,
   },
 ];

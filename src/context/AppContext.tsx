@@ -70,6 +70,12 @@ export interface PanelTechnicalSpecs {
   instrumentQuantities?: Record<string, string>;
 }
 
+export interface SavedInstrumentModel {
+  company?: string;
+  model?: string;
+  quantity?: number;
+}
+
 export interface PanelImages {
   frontImage?: string;
   insideImage?: string;
@@ -128,6 +134,11 @@ export interface Panel {
   installationLocation?: string;
   projectName?: string;
   description?: string;
+  motorConfiguration?: Array<{
+    connectionType?: string;
+    minHp?: string;
+    maxHp?: string;
+  }>;
   companyName?: string;
   company?: string | { name?: string; logoUrl?: string };
   companyLogoUrl?: string;
@@ -139,7 +150,7 @@ export interface Panel {
   technicalSpecs?: PanelTechnicalSpecs;
   images?: PanelImages;
   diagrams?: PanelDiagram[];
-  instrumentModels?: Record<string, string[]>;
+  instrumentModels?: Record<string, (string | SavedInstrumentModel)[]>;
   documents?: PanelDocuments;
   maintenance?: PanelMaintenance;
 }

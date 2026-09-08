@@ -25,6 +25,13 @@ import {
 } from "lucide-react";
 import api from "../lib/api";
 import { useApp } from "../context/AppContext";
+import {
+  expandSavedInstrumentModels,
+  finalizeInstrumentRows,
+  groupEffectiveInstrumentRows,
+  resolveEffectiveInstrumentRows,
+  type InstrumentModelRow,
+} from "../lib/instrumentModelRows";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1568,9 +1575,9 @@ function StepInstrumentModels({
   data: FormData;
   instrumentList: any[];
   instrumentCategories: string[];
-  selections: Record<string, { company?: string; model?: string }[]>;
+  selections: Record<string, InstrumentModelRow[]>;
   setSelections: (
-    s: Record<string, { company?: string; model?: string }[]>,
+    s: Record<string, InstrumentModelRow[]>,
   ) => void;
 }) {
   // derive categories to show based on technical specs quantities
@@ -1586,12 +1593,43 @@ function StepInstrumentModels({
       return qty > 0;
     });
 
+  const [finalizedSelections, setFinalizedSelections] = useState<
+    Record<string, InstrumentModelRow[]>
+  >({});
+  const activeCategoryRef = useRef<string | null>(null);
+
+  const activateCategory = (category: string) => {
+    const key = normalizeCategorySelectionKey(category);
+    const previousKey = activeCategoryRef.current;
+    if (previousKey && previousKey !== key) {
+      const previousCategory = categoriesToShow.find(
+        (entry) => entry.key === previousKey,
+      );
+      const previousQuantity = previousCategory
+        ? Number(data.instrumentCategoryQuantities?.[previousCategory.label] || 0)
+        : 0;
+      if (previousQuantity > 0) {
+        setFinalizedSelections((current) => ({
+          ...current,
+          [previousKey]: finalizeInstrumentRows(
+            selections[previousKey],
+            previousQuantity,
+          ),
+        }));
+      }
+    }
+    activeCategoryRef.current = key;
+    setFinalizedSelections((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  };
+
   // ensure selection arrays are initialized to correct lengths
   useEffect(() => {
-    const next = { ...selections } as Record<
-      string,
-      { company?: string; model?: string }[]
-    >;
+    const next = { ...selections } as Record<string, InstrumentModelRow[]>;
     let changed = false;
     categoriesToShow.forEach((cat) => {
       const qty = Number(data.instrumentCategoryQuantities?.[cat.label] || 0);
@@ -1724,36 +1762,39 @@ function StepInstrumentModels({
     company: string,
   ) => {
     const key = normalizeCategorySelectionKey(category);
+    activateCategory(category);
     console.log(`Company changed for ${category}[${index}] ->`, company);
-    setSelections({
-      ...selections,
-      [key]: (
-        selections[key] ||
-        Array.from(
-          {
-            length: Number(data.instrumentCategoryQuantities?.[category] || 0),
-          },
-          () => ({}),
-        )
-      ).map((s, i) => (i === index ? { ...s, company, model: undefined } : s)),
-    });
+    const quantity = Number(data.instrumentCategoryQuantities?.[category] || 0);
+    const nextRows = Array.from({ length: quantity }, (_, rowIndex) => selections[key]?.[rowIndex] || {});
+    nextRows[index] = { company, model: "" };
+    setSelections({ ...selections, [key]: nextRows });
   };
 
   const onModelChange = (category: string, index: number, model: string) => {
     const key = normalizeCategorySelectionKey(category);
+    activateCategory(category);
     console.log(`Model changed for ${category}[${index}] ->`, model);
+    const quantity = Number(data.instrumentCategoryQuantities?.[category] || 0);
+    const effective = resolveEffectiveInstrumentRows(selections[key], quantity)[index] || {};
+    const nextRows = Array.from({ length: quantity }, (_, rowIndex) => selections[key]?.[rowIndex] || {});
+    nextRows[index] = { company: effective.company || "", model };
+    setSelections({ ...selections, [key]: nextRows });
+  };
+
+  const clearCategoryRows = (category: string) => {
+    const key = normalizeCategorySelectionKey(category);
+    const quantity = Number(data.instrumentCategoryQuantities?.[category] || 0);
     setSelections({
       ...selections,
-      [key]: (
-        selections[key] ||
-        Array.from(
-          {
-            length: Number(data.instrumentCategoryQuantities?.[category] || 0),
-          },
-          () => ({}),
-        )
-      ).map((s, i) => (i === index ? { ...s, model } : s)),
+      [key]: Array.from({ length: quantity }, () => ({})),
     });
+    setFinalizedSelections((current) => {
+      if (!(key in current)) return current;
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+    if (activeCategoryRef.current === key) activeCategoryRef.current = null;
   };
 
   return (
@@ -1790,11 +1831,23 @@ function StepInstrumentModels({
                   Assign {qty} model{qty !== 1 ? "s" : ""} for {cat.label}
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => clearCategoryRows(cat.label)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                title={`Clear all ${cat.label} rows`}
+              >
+                <X size={13} />
+                Clear
+              </button>
             </div>
 
             <div className="grid grid-cols-1 gap-3">
               {Array.from({ length: qty }).map((_, i) => {
-                const sel = selections[key]?.[i] || {};
+                const effectiveRows = finalizedSelections[key]
+                  ? finalizedSelections[key]
+                  : resolveEffectiveInstrumentRows(selections[key], qty);
+                const sel = effectiveRows[i] || {};
                 const companyOptions = companies;
                 const modelOptions = modelsForCategoryAndCompany(
                   cat.label,
@@ -1818,7 +1871,10 @@ function StepInstrumentModels({
                     className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center"
                   >
                     <div className="md:col-span-1">
-                      <Label>Company</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Company</Label>
+                        {sel.inherited && <span className="text-[10px] text-[#0EA5E9]">Auto-filled</span>}
+                      </div>
                       <SearchableSelect
                         value={sel.company || ""}
                         onChange={(v) => onCompanyChange(cat.label, i, v)}
@@ -1858,7 +1914,7 @@ function StepInstrumentModels({
 
 function buildInstrumentSummary(
   data: FormData,
-  selections: Record<string, { company?: string; model?: string }[]>,
+  selections: Record<string, InstrumentModelRow[]>,
 ) {
   const grouped: Array<{
     category: string;
@@ -1871,33 +1927,20 @@ function buildInstrumentSummary(
       if (!category || qty <= 0) return;
 
       const normalizedKey = normalizeCategorySelectionKey(category);
-      const entries = Array.from({ length: qty }, (_, index) => {
-        const selection = selections[normalizedKey]?.[index] || {};
-        return selection;
-      }).filter((entry) => entry.company?.trim() || entry.model?.trim());
-
-      if (!entries.length) return;
-
-      const counts = new Map<string, number>();
-      entries.forEach((entry) => {
-        const company =
-          (entry.company || "Unknown company").trim() || "Unknown company";
-        const model =
-          (entry.model || "Unknown model").trim() || "Unknown model";
-        const key = `${company}::${model}`;
-        counts.set(key, (counts.get(key) || 0) + 1);
-      });
+        const entries = resolveEffectiveInstrumentRows(
+          selections[normalizedKey],
+          qty,
+        );
+        const groupedEntries = groupEffectiveInstrumentRows(entries);
+        if (!groupedEntries.length) return;
 
       grouped.push({
         category,
-        items: Array.from(counts.entries()).map(([key, count]) => {
-          const [company, ...modelParts] = key.split("::");
-          return {
-            company: company || "Unknown company",
-            model: modelParts.join("::") || "Unknown model",
-            count,
-          };
-        }),
+          items: groupedEntries.map(({ company, model, quantity }) => ({
+            company,
+            model,
+            count: quantity,
+          })),
       });
     },
   );
@@ -1973,7 +2016,7 @@ function Step4({
 }: {
   data: FormData;
   panelId: string;
-  selections: Record<string, { company?: string; model?: string }[]>;
+  selections: Record<string, InstrumentModelRow[]>;
   isPremium: boolean;
 }) {
   const instrumentGroups = useMemo(
@@ -2411,7 +2454,7 @@ export default function CreatePanelWizard({
     ),
   );
   const [selections, setSelections] = useState<
-    Record<string, { company?: string; model?: string }[]>
+    Record<string, InstrumentModelRow[]>
   >({});
 
   // Load source data for edit and duplicate flows.
@@ -2449,7 +2492,7 @@ export default function CreatePanelWizard({
           current: panel.technicalSpecs?.current || "",
           frequency: panel.technicalSpecs?.frequency || "50",
           phase: panel.technicalSpecs?.phase || "",
-          instrumentCategoryQuantities: {},
+          instrumentCategoryQuantities: panel.technicalSpecs?.instrumentQuantities || {},
           motorConfiguration: panel.motorConfiguration || [],
           powerRating: panel.technicalSpecs?.powerRating || "",
           powerFactor: panel.technicalSpecs?.powerFactor || "",
@@ -2535,6 +2578,7 @@ export default function CreatePanelWizard({
           panel.instrumentModels &&
           typeof panel.instrumentModels === "object"
         ) {
+          const savedQuantities = panel.technicalSpecs?.instrumentQuantities || {};
           const quantities: Record<string, string> = {};
           const nextSelections: Record<
             string,
@@ -2543,18 +2587,15 @@ export default function CreatePanelWizard({
           Object.entries(panel.instrumentModels).forEach(
             ([category, values]) => {
               if (!Array.isArray(values)) return;
-              quantities[category] = String(values.length || 0);
+              const quantity = Number(savedQuantities[category] || values.length || 0);
+              quantities[category] = String(quantity);
               nextSelections[normalizeCategorySelectionKey(category)] =
-                values.map((entry) => {
-                  const raw = String(entry || "");
-                  const [company, ...modelParts] = raw.split("::");
-                  return {
-                    company: company || "",
-                    model: modelParts.join("::") || "",
-                  };
-                });
+                expandSavedInstrumentModels(values).slice(0, quantity);
             },
           );
+          Object.entries(savedQuantities).forEach(([category, quantity]) => {
+            if (quantities[category] === undefined) quantities[category] = String(quantity || 0);
+          });
           nextData.instrumentCategoryQuantities = quantities;
           setSelections(nextSelections);
         }
@@ -2712,6 +2753,37 @@ export default function CreatePanelWizard({
     setErrors([]);
 
     try {
+      if (isPremium) {
+        const instrumentErrors: string[] = [];
+        Object.entries(data.instrumentCategoryQuantities || {}).forEach(
+          ([category, rawQuantity]) => {
+            const quantity = Number(rawQuantity || 0);
+            if (quantity <= 0) return;
+            const rows = finalizeInstrumentRows(
+              selections[normalizeCategorySelectionKey(category)],
+              quantity,
+            );
+            if (rows.some((row) => !row.company?.trim() || !row.model?.trim())) {
+              instrumentErrors.push(
+                `${category}: enter at least one Company + Model anchor so every row can be resolved.`,
+              );
+            }
+            const total = groupEffectiveInstrumentRows(rows).reduce(
+              (sum, group) => sum + group.quantity,
+              0,
+            );
+            if (total !== quantity) {
+              instrumentErrors.push(`${category}: model quantities must total ${quantity}.`);
+            }
+          },
+        );
+        if (instrumentErrors.length) {
+          setErrors(instrumentErrors);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const uploadImage = async (file: File | null) => {
         if (!file) return "";
         const formData = new FormData();
@@ -2788,40 +2860,18 @@ export default function CreatePanelWizard({
       };
 
       const buildInstrumentModelPayload = () => {
-        const out: Record<string, string[]> = {};
+        const out: Record<string, { company: string; model: string; quantity: number }[]> = {};
         instrumentCategories.forEach((category) => {
           const qty = Number(
             data.instrumentCategoryQuantities?.[category] || 0,
           );
           if (qty <= 0) return;
-
-          const arr = Array.from(
-            { length: qty },
-            (_, i) =>
-              selections[normalizeCategorySelectionKey(category)]?.[i] || {},
+          const rows = finalizeInstrumentRows(
+            selections[normalizeCategorySelectionKey(category)],
+            qty,
           );
-          const firstCompletedModel = arr
-            .find((entry) => entry.model?.trim())
-            ?.model?.trim();
-
-          const models = arr
-            .map((entry) => {
-              const company = entry.company?.trim();
-              const model = entry.model?.trim();
-
-              if (company && model) {
-                return `${company}::${model}`;
-              }
-
-              if (model) return model;
-              if (!company && !model && firstCompletedModel) {
-                return firstCompletedModel;
-              }
-              return null;
-            })
-            .filter((value): value is string => Boolean(value));
-
-          if (models.length) out[category] = models;
+          const groups = groupEffectiveInstrumentRows(rows);
+          if (groups.length) out[category] = groups;
         });
         return out;
       };
