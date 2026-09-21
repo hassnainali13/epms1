@@ -9,7 +9,7 @@ export default function QRCodeTemplatesPage() {
   const templates = getAllTemplates();
   const selectedTemplateInfo = getTemplate(selectedTemplate);
   const SelectedTemplate = selectedTemplateInfo?.component;
-
+//   const [isExporting, setIsExporting] = useState(false);
   const handleSelectTemplate = (templateId: TemplateId) => {
     setSelectedTemplate(templateId);
   };
