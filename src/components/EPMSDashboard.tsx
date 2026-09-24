@@ -836,14 +836,32 @@ export default function EPMSDashboard() {
                               key={panel.id}
                               className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
                             >
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-[#0F172A] truncate">
-                                  {panel.panelName || panel.name}
-                                </p>
-                                <p className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
-                                  {panel.panelId || panel.id} ·{" "}
-                                  {panel.installationLocation}
-                                </p>
+                              <div className="min-w-0 flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 bg-[#DBEAFE] border border-[#BFDBFE] flex items-center justify-center">
+                                  {panel.images?.frontImage ? (
+                                    <img
+                                      src={panel.images.frontImage}
+                                      alt="Panel front"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-[#2563EB]">
+                                      N/A
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-[#0F172A] truncate">
+                                    {panel.panelName || panel.name}
+                                  </p>
+                                  <p className="text-[10px] font-mono text-[#94A3B8] mt-0.5">
+                                    {panel.panelId || panel.id} ·{" "}
+                                    {panel.installationLocation}
+                                  </p>
+                                  <p className="text-[10px] text-[#64748B] mt-1 truncate">
+                                    Motors: {panel.motorConfiguration?.length || 0} · Size: {panel.technicalSpecs?.dimensions || "N/A"}
+                                  </p>
+                                </div>
                               </div>
                               <p className="text-xs text-[#64748B] truncate">
                                 {panel.customer}

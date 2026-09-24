@@ -79,9 +79,9 @@ export default function QRCodeTemplatesPage() {
 
       {/* Main Content */}
       <div className="flex-1 p-6 overflow-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] gap-6 w-full max-w-[1600px] mx-auto">
           {/* Templates List */}
-          <div className="lg:col-span-1">
+          <div className="min-w-0">
             <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
               <div className="px-6 py-4 border-b border-[#F1F5F9]">
                 <p className="text-sm font-bold text-[#0F172A]">
@@ -137,7 +137,7 @@ export default function QRCodeTemplatesPage() {
           </div>
 
           {/* Preview */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0">
             <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
               <div className="px-6 py-4 border-b border-[#F1F5F9]">
                 <p className="text-sm font-bold text-[#0F172A]">Preview</p>
