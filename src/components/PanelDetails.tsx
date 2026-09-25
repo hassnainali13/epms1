@@ -857,19 +857,15 @@ function ProtectionSection({ panel }: { panel?: PanelRecord }) {
 
 function ImagesSection({
   panel,
-  onDownloadAll,
 }: {
   panel?: PanelRecord;
-  onDownloadAll?: () => void;
 }) {
-  const [activeIdx, setActiveIdx] = useState(0);
-  const [zoom, setZoom] = useState(false);
+  const [zoomImage, setZoomImage] = useState<{
+    url: string;
+    label: string;
+  } | null>(null);
+  const [isZoomed, setIsZoomed] = useState(false);
   const images = buildImageList(panel);
-  const active = images[activeIdx];
-
-  useEffect(() => {
-    setActiveIdx(0);
-  }, [panel?.panelId]);
 
   return (
     <SectionCard>
@@ -878,73 +874,40 @@ function ImagesSection({
         title="Panel Images"
         subtitle={`${images.length} high-resolution photos`}
         accent="#F59E0B"
-        right={
-          <button
-            onClick={onDownloadAll}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-[#64748B] border border-[#E5E7EB] rounded-xl hover:bg-[#F8FAFC] transition-colors"
-          >
-            <Download size={12} /> Download All
-          </button>
-        }
       />
-      <div className="p-6 space-y-4">
+      <div className="p-3 sm:p-6 space-y-4">
         {images.length ? (
-          <>
-            <div
-              className="relative rounded-2xl overflow-hidden bg-[#0F172A] group"
-              style={{ aspectRatio: "16/9" }}
-            >
-              <img
-                src={active.url}
-                alt={active.label}
-                className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-              />
-              <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center justify-between w-full px-5 pb-4">
-                  <div>
-                    <p className="text-white text-sm font-bold">
-                      {active.label}
-                    </p>
-                    <p className="text-white/60 text-xs">
-                      {activeIdx + 1} of {images.length}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setZoom(true)}
-                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-                    >
-                      <ZoomIn size={14} />
-                    </button>
-                    <button
-                      onClick={() =>
-                        window.open(active.url, "_blank", "noopener,noreferrer")
-                      }
-                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
-                    >
-                      <Download size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {images.map((img, i) => (
-                <button
-                  key={img.id}
-                  onClick={() => setActiveIdx(i)}
-                  className={`flex-shrink-0 relative rounded-xl overflow-hidden transition-all ${i === activeIdx ? "ring-2 ring-[#F59E0B] ring-offset-2" : "opacity-60 hover:opacity-90"}`}
-                  style={{ width: 100, height: 70 }}
-                >
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {images.map((img) => (
+              <button
+                key={img.id}
+                type="button"
+                onClick={() => {
+                  setZoomImage({ url: img.url, label: img.label });
+                  setIsZoomed(false);
+                }}
+                className="group overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white text-left shadow-[0_1px_6px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 hover:border-[#F59E0B] hover:shadow-[0_8px_20px_rgba(15,23,42,0.1)] transition-all focus:outline-none focus:ring-2 focus:ring-[#F59E0B]"
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-[#F8FAFC]">
                   <img
                     src={img.thumb}
                     alt={img.label}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                </button>
-              ))}
-            </div>
-          </>
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-950/0 group-hover:bg-slate-950/25 transition-colors">
+                    <ZoomIn
+                      size={22}
+                      className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow"
+                    />
+                  </div>
+                </div>
+                <div className="px-4 py-3">
+                  <p className="text-xs font-bold text-[#0F172A]">{img.label}</p>
+                  <p className="text-[10px] text-[#94A3B8] mt-1">Click to view full image</p>
+                </div>
+              </button>
+            ))}
+          </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-[#E5E7EB] bg-[#F8FAFC] p-8 text-center text-sm text-[#64748B]">
             No images have been uploaded for this panel yet.
@@ -952,18 +915,36 @@ function ImagesSection({
         )}
       </div>
 
-      {zoom && active && (
+      {zoomImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-6"
-          onClick={() => setZoom(false)}
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center overflow-auto p-3 sm:p-6"
+          onClick={() => {
+            setZoomImage(null);
+            setIsZoomed(false);
+          }}
         >
-          <button className="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+          <div className="absolute top-3 left-3 sm:top-5 sm:left-5 max-w-[calc(100%-6rem)] truncate text-white text-xs sm:text-sm font-semibold">
+            {zoomImage.label}
+          </div>
+          <button
+            onClick={() => {
+              setZoomImage(null);
+              setIsZoomed(false);
+            }}
+            className="absolute top-3 right-3 sm:top-5 sm:right-5 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
+            title="Close image"
+          >
             <X size={18} />
           </button>
           <img
-            src={active.url}
-            alt={active.label}
-            className="max-w-full max-h-full rounded-2xl object-contain"
+            src={zoomImage.url}
+            alt={zoomImage.label}
+            onDoubleClick={() => setIsZoomed((current) => !current)}
+            className={`max-w-full rounded-2xl object-contain transition-transform duration-300 select-none ${
+              isZoomed
+                ? "max-w-none max-h-none w-auto scale-[1.5] sm:scale-[1.75] cursor-zoom-out"
+                : "max-h-[calc(100vh-72px)] sm:max-h-[calc(100vh-48px)] cursor-zoom-in"
+            }`}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -1214,16 +1195,6 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     }
   };
 
-  const handleDownloadImages = () => {
-    const images = buildImageList(panel || undefined);
-    images.forEach((image) => {
-      const anchor = document.createElement("a");
-      anchor.href = image.url;
-      anchor.download = `${panel?.panelId || panel?.id || "panel"}-${image.label}.jpg`;
-      anchor.click();
-    });
-  };
-
   const content: Record<Tab, ReactNode> = {
     overview: (
       <>
@@ -1271,7 +1242,6 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     images: (
       <ImagesSection
         panel={panel || undefined}
-        onDownloadAll={handleDownloadImages}
       />
     ),
     diagrams: <DiagramsSection panel={panel || undefined} />,

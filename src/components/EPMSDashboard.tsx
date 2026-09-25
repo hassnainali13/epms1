@@ -120,6 +120,10 @@ export default function EPMSDashboard() {
   const [showSearch, setShowSearch] = useState(false);
   const [showDuplicatePicker, setShowDuplicatePicker] = useState(false);
   const [qrPanelId, setQrPanelId] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string;
+    name: string;
+  } | null>(null);
   const showDashboardOverview =
     activeNav === "dashboard" || activeNav === "panels";
   const showDedicatedPageOnly =
@@ -135,12 +139,7 @@ export default function EPMSDashboard() {
 
   if (!currentUser) return null;
   const installed = panels.filter((p) => p.status === "Installed").length;
-  const pending = panels.filter(
-    (p) =>
-      p.status === "Pending" ||
-      p.status === "In Production" ||
-      p.status === "QC Review",
-  ).length;
+  const ready = panels.filter((p) => p.status === "Ready").length;
   const isPremium = currentUser.plan === "PREMIUM";
   const isFree = currentUser.plan === "FREE";
   const panelLimitReached = isFree && panels.length >= 3;
@@ -556,19 +555,19 @@ export default function EPMSDashboard() {
                       </p>
                     </div>
 
-                    {/* Pending */}
+                    {/* Ready */}
                     <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5 hover:shadow-md transition-shadow">
                       <div className="w-9 h-9 rounded-xl bg-[#F59E0B] flex items-center justify-center mb-3">
                         <Clock size={16} className="text-white" />
                       </div>
                       <p className="text-2xl font-bold text-[#0F172A] tracking-tight">
-                        {pending}
+                        {ready}
                       </p>
                       <p className="text-xs font-medium text-[#0F172A] mt-0.5">
-                        Pending Panels
+                        Ready Panels
                       </p>
                       <p className="text-[11px] text-[#64748B] mt-0.5">
-                        In progress or awaiting install
+                        Ready for installation
                       </p>
                     </div>
 
@@ -671,17 +670,6 @@ export default function EPMSDashboard() {
                         <span>Duplicate Panel Create</span>
                       </button>
 
-                      {/* Search Panel */}
-                      <button
-                        onClick={() => setShowSearch(true)}
-                        className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A]"
-                      >
-                        <div className="w-9 h-9 rounded-xl bg-[#8B5CF6] flex items-center justify-center">
-                          <Search size={17} className="text-white" />
-                        </div>
-                        <span>Search Panel</span>
-                      </button>
-
                       {/* Generate QR */}
                       <button
                         onClick={() => {
@@ -695,36 +683,6 @@ export default function EPMSDashboard() {
                         <span>Generate QR</span>
                       </button>
 
-                      {/* Export PDF */}
-                      <button
-                        onClick={() => {
-                          if (isFree) {
-                            triggerUpgrade(
-                              "Export PDF with company branding requires a Premium subscription.",
-                            );
-                          }
-                        }}
-                        className="flex flex-col items-center gap-2 py-4 px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-sm font-medium text-[#0F172A] relative"
-                      >
-                        <div
-                          className={`w-9 h-9 rounded-xl flex items-center justify-center ${isPremium ? "bg-[#F59E0B]" : "bg-[#F1F5F9]"}`}
-                        >
-                          <FileText
-                            size={17}
-                            className={
-                              isPremium ? "text-white" : "text-[#94A3B8]"
-                            }
-                          />
-                        </div>
-                        <span className={isPremium ? "" : "text-[#94A3B8]"}>
-                          Export PDF
-                        </span>
-                        {isFree && (
-                          <span className="absolute top-2 right-2 w-4 h-4 bg-[#0EA5E9] rounded-full flex items-center justify-center">
-                            <Lock size={8} className="text-white" />
-                          </span>
-                        )}
-                      </button>
                     </div>
 
                     {/* Premium feature hints for free users */}
@@ -837,19 +795,32 @@ export default function EPMSDashboard() {
                               className="grid grid-cols-[1fr_120px_110px_90px_36px_36px_36px_36px_36px] gap-4 px-6 py-3.5 border-b border-[#F1F5F9] last:border-0 hover:bg-[#F8FAFC] transition-colors items-center"
                             >
                               <div className="min-w-0 flex items-center gap-3">
-                                <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 bg-[#DBEAFE] border border-[#BFDBFE] flex items-center justify-center">
-                                  {panel.images?.frontImage ? (
+                                {panel.images?.frontImage ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setLightboxImage({
+                                        src: panel.images?.frontImage || "",
+                                        name: panel.panelName || panel.name || "Panel front image",
+                                      })
+                                    }
+                                    className="group relative w-11 h-11 rounded-full overflow-hidden flex-shrink-0 bg-[#DBEAFE] border-2 border-white shadow-[0_1px_5px_rgba(15,23,42,0.2)] ring-1 ring-[#CBD5E1] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]"
+                                    title="Open front image"
+                                  >
                                     <img
                                       src={panel.images.frontImage}
                                       alt="Panel front"
-                                      className="w-full h-full object-cover"
+                                      className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-110"
                                     />
-                                  ) : (
-                                    <span className="text-[10px] font-bold text-[#2563EB]">
+                                    <span className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/25 transition-colors" />
+                                  </button>
+                                ) : (
+                                  <div className="w-11 h-11 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-[#DBEAFE] to-[#BFDBFE] border-2 border-white shadow-[0_1px_5px_rgba(15,23,42,0.15)] ring-1 ring-[#CBD5E1] flex items-center justify-center">
+                                    <span className="text-[10px] font-bold tracking-wide text-[#2563EB]">
                                       N/A
                                     </span>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium text-[#0F172A] truncate">
                                     {panel.panelName || panel.name}
@@ -1175,6 +1146,36 @@ export default function EPMSDashboard() {
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-[60] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-5"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center gap-3"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between px-1">
+              <p className="text-sm font-semibold text-white truncate pr-4">
+                {lightboxImage.name}
+              </p>
+              <button
+                type="button"
+                onClick={() => setLightboxImage(null)}
+                className="flex-shrink-0 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+                title="Close image"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <img
+              src={lightboxImage.src}
+              alt={lightboxImage.name}
+              className="max-w-full max-h-[calc(90vh-60px)] rounded-2xl object-contain shadow-2xl ring-1 ring-white/20"
+            />
           </div>
         </div>
       )}
