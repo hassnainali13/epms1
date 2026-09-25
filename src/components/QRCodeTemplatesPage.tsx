@@ -1,11 +1,27 @@
 import { useState } from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Bell,
+  Building2,
+  Check,
+  Crown,
+  FileText,
+  LayoutDashboard,
+  MapPin,
+  QrCode,
+  Settings,
+  UserCheck,
+  Users,
+  Wrench,
+  Zap,
+} from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { getAllTemplates, getTemplate } from "./templates";
 import type { TemplateId } from "./templates";
 
 export default function QRCodeTemplatesPage() {
-  const { selectedTemplate, setSelectedTemplate } = useApp();
+  const { selectedTemplate, setSelectedTemplate, currentUser, logout } = useApp();
   const templates = getAllTemplates();
   const selectedTemplateInfo = getTemplate(selectedTemplate);
   const SelectedTemplate = selectedTemplateInfo?.component;
@@ -53,28 +69,132 @@ export default function QRCodeTemplatesPage() {
   const mockCompanyName = "Star Electrical Engineering";
   const mockCompanyLogo = undefined;
 
+  const menuItems = [
+    { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+    { label: "Panels", icon: Zap, path: "/" },
+    { label: "Company", icon: Building2, path: "/" },
+    { label: "Employees", icon: Users, path: "/" },
+    { label: "Customers", icon: UserCheck, path: "/" },
+    { label: "Installations", icon: MapPin, path: "/" },
+    { label: "QR Code Templates", icon: QrCode, path: "/qr-code-templates" },
+    { label: "QR Codes", icon: QrCode, path: "/" },
+    { label: "Diagrams", icon: FileText, path: "/" },
+    { label: "Reports", icon: BarChart3, path: "/" },
+    { label: "Maintenance", icon: Wrench, path: "/" },
+  ];
+
+  const navigateFromMenu = (path: string) => {
+    window.history.pushState({}, "", path);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-[#E5E7EB] px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <h1 className="text-2xl font-bold text-[#0F172A]">
-                QR Code Templates
-              </h1>
-              <p className="text-sm text-[#64748B] mt-1">
-                Select a template for your QR code specifications
-              </p>
-            </div>
+    <div className="min-h-screen bg-[#F8FAFC] flex">
+      <aside className="w-16 md:w-[230px] flex-shrink-0 min-h-screen bg-white border-r border-[#E5E7EB] flex flex-col">
+        <div className="h-16 flex items-center justify-center md:justify-start gap-3 px-3 md:px-5 border-b border-[#E5E7EB]">
+          <div className="w-8 h-8 rounded-lg bg-[#F0F9FF] text-[#0EA5E9] flex items-center justify-center flex-shrink-0">
+            <Zap size={16} />
+          </div>
+          <div className="hidden md:block min-w-0">
+            <p className="text-sm font-bold text-[#0F172A] truncate">
+              {currentUser?.companyName || currentUser?.name || "EPMS"}
+            </p>
+            <p className="text-[10px] text-[#64748B]">Management System</p>
           </div>
         </div>
+        <nav className="flex-1 py-4 px-2 md:px-3 space-y-1">
+          {menuItems.map(({ label, icon: Icon, path }) => {
+            const active = label === "QR Code Templates";
+            return (
+              <button
+                key={label}
+                type="button"
+                title={label}
+                onClick={() => navigateFromMenu(path)}
+                className={`w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-[#F0F9FF] text-[#0369A1]"
+                    : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
+                }`}
+              >
+                <Icon size={18} className="flex-shrink-0" />
+                <span className="hidden md:block text-left whitespace-nowrap">
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+        <div className="border-t border-[#E5E7EB] p-2 md:p-3 space-y-1">
+          <button
+            type="button"
+            title="Settings"
+            className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm text-[#64748B] hover:bg-[#F8FAFC]"
+          >
+            <Settings size={18} />
+            <span className="hidden md:block">Settings</span>
+          </button>
+          <button
+            type="button"
+            title="Logout"
+            onClick={logout}
+            className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm text-[#64748B] hover:bg-red-50 hover:text-red-600"
+          >
+            <ArrowLeft size={18} />
+            <span className="hidden md:block">Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0 flex flex-col">
+      {/* Top navigation */}
+      <header className="h-16 bg-white border-b border-[#E5E7EB] flex items-center px-3 sm:px-6 gap-3 flex-shrink-0">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
+          title="Back to dashboard"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div className="hidden sm:flex items-center gap-2 text-sm">
+          <span className="text-[#64748B]">EPMS</span>
+          <span className="text-[#CBD5E1]">/</span>
+          <span className="font-medium text-[#0F172A]">QR Code Templates</span>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
+          <span
+            className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+              currentUser?.plan === "PREMIUM"
+                ? "bg-[#0EA5E9] text-white"
+                : "bg-[#F1F5F9] text-[#64748B]"
+            }`}
+          >
+            {currentUser?.plan === "PREMIUM" ? (
+              <>
+                <Crown size={10} /> PREMIUM
+              </>
+            ) : (
+              "FREE"
+            )}
+          </span>
+          <button
+            type="button"
+            className="p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
+            title="Notifications"
+          >
+            <Bell size={18} />
+          </button>
+        </div>
+      </header>
+
+      <div className="px-3 sm:px-6 pt-4 sm:pt-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">
+          QR Code Templates
+        </h1>
+        <p className="text-sm text-[#64748B] mt-1">
+          Select a template for your QR code specifications
+        </p>
       </div>
 
       {/* Main Content */}
@@ -167,6 +287,7 @@ export default function QRCodeTemplatesPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
