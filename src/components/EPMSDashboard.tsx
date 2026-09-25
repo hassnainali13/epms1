@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Zap,
@@ -47,6 +47,7 @@ import {
 } from "./ui/dialog";
 import InstrumentMaster from "./InstrumentMaster";
 import DiagramLibrary from "./DiagramLibrary";
+import epmsLogo from "../assets/epms_logo.svg";
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
@@ -117,6 +118,14 @@ export default function EPMSDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window === "undefined" ? true : window.innerWidth >= 768,
   );
+  useEffect(() => {
+    const syncSidebarWithViewport = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+
+    window.addEventListener("resize", syncSidebarWithViewport);
+    return () => window.removeEventListener("resize", syncSidebarWithViewport);
+  }, []);
   const [profileOpen, setProfileOpen] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
@@ -154,11 +163,11 @@ export default function EPMSDashboard() {
     <div className="flex h-screen w-full bg-[#F8FAFC] font-[Inter,sans-serif] overflow-hidden">
       {/* ── Sidebar ── */}
       <aside
-        className={`fixed md:relative inset-y-0 left-0 ${sidebarOpen ? "w-[264px]" : "w-16 md:w-[72px]"} h-screen flex-shrink-0 bg-white border-r border-[#E5E7EB] flex flex-col transition-[width] duration-300 ease-in-out ${sidebarOpen ? "z-50" : "z-30"}`}
+        className={`fixed md:relative inset-y-0 left-0 ${sidebarOpen ? "w-[200px] md:w-[264px]" : "w-12 md:w-[72px]"} h-screen flex-shrink-0 bg-white border-r border-[#E5E7EB] flex flex-col transition-[width] duration-300 ease-in-out ${sidebarOpen ? "z-50" : "z-30"}`}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-center md:justify-start px-3 md:px-5 border-b border-[#E5E7EB] gap-3">
-          <div className="w-8 h-8 rounded-lg bg-[#f5f6f6] flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className="h-16 flex items-center justify-center md:justify-start px-2 md:px-5 border-b border-[#E5E7EB] gap-2 md:gap-3">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-[#f5f6f6] flex items-center justify-center flex-shrink-0 overflow-hidden">
             {logoUrl ? (
               <img
                 src={logoUrl}
@@ -207,7 +216,7 @@ export default function EPMSDashboard() {
                       setActiveNav(id);
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+                    className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-1 md:px-3 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
                       active
                         ? "bg-[#F0F9FF] text-[#0369A1]"
                         : "text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A]"
@@ -215,7 +224,7 @@ export default function EPMSDashboard() {
                   >
                     <Icon
                       size={18}
-                      className={`flex-shrink-0 ${active ? "text-[#0EA5E9]" : "text-[#94A3B8] group-hover:text-[#64748B]"}`}
+                      className={`h-4 w-4 md:h-[18px] md:w-[18px] flex-shrink-0 ${active ? "text-[#0EA5E9]" : "text-[#94A3B8] group-hover:text-[#64748B]"}`}
                     />
                     {sidebarOpen && (
                       <span className="whitespace-nowrap flex-1 text-left">
@@ -265,14 +274,14 @@ export default function EPMSDashboard() {
         {/* Bottom */}
         <div className="border-t border-[#E5E7EB] p-2 md:p-3 space-y-0.5">
           <button className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm font-medium text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#0F172A] transition-colors">
-            <Settings size={18} className="flex-shrink-0 text-[#94A3B8]" />
+            <Settings size={18} className="h-4 w-4 md:h-[18px] md:w-[18px] flex-shrink-0 text-[#94A3B8]" />
             {sidebarOpen && <span>Settings</span>}
           </button>
           <button
             onClick={logout}
             className="w-full flex items-center justify-center md:justify-start gap-3 px-2 md:px-3 py-2.5 rounded-xl text-sm font-medium text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-colors"
           >
-            <LogOut size={18} className="flex-shrink-0" />
+            <LogOut size={18} className="h-4 w-4 md:h-[18px] md:w-[18px] flex-shrink-0" />
             {sidebarOpen && <span>Logout</span>}
           </button>
 
@@ -296,15 +305,15 @@ export default function EPMSDashboard() {
         </div>
       </aside>
 
-      <div aria-hidden="true" className="w-16 flex-shrink-0 md:hidden" />
+      <div aria-hidden="true" className="w-12 flex-shrink-0 md:hidden" />
 
       <button
         type="button"
         onClick={() => setSidebarOpen((open) => !open)}
         aria-label={sidebarOpen ? "Collapse navigation" : "Open navigation"}
-        className={`absolute top-1/2 -translate-y-1/2 z-[55] flex h-9 w-5 items-center justify-center rounded-r-lg border border-l-0 border-[#E5E7EB] bg-white text-[#64748B] shadow-sm transition-[left] duration-300 ease-in-out ${sidebarOpen ? "left-[263px]" : "left-[63px] md:left-[71px]"}`}
+        className={`absolute top-1/2 -translate-y-1/2 z-[55] flex h-7 w-3 md:h-9 md:w-5 items-center justify-center rounded-r-lg border border-l-0 border-[#E5E7EB] bg-white text-[#64748B] shadow-sm transition-[left] duration-300 ease-in-out ${sidebarOpen ? "left-[199px] md:left-[263px]" : "left-[47px] md:left-[71px]"}`}
       >
-        {sidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+        {sidebarOpen ? <ChevronLeft size={13} /> : <ChevronRight size={13} />}
       </button>
 
       {sidebarOpen && (
@@ -320,12 +329,12 @@ export default function EPMSDashboard() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* ── Navbar ── */}
         <header className="h-16 bg-white border-b border-[#E5E7EB] flex items-center px-3 sm:px-6 gap-2 sm:gap-4 flex-shrink-0 z-20">
-          <div className="hidden md:flex items-center gap-2 text-sm">
-            <span className="text-[#64748B]">EPMS</span>
-            <span className="text-[#CBD5E1]">/</span>
-            <span className="font-medium text-[#0F172A] capitalize">
-              {activeNav}
-            </span>
+          <div className="flex items-center">
+            <img
+              src={epmsLogo}
+              alt="EPMS"
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
           </div>
 
           <div className="flex items-center gap-1 ml-auto">
@@ -720,7 +729,7 @@ export default function EPMSDashboard() {
 
                 {/* ── Recent Panels Table ── */}
                 {showPanelsTable && (
-                  <div className="bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                  <div className="bg-[#F8FAFC] md:bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#E5E7EB]">
                       <div>
                         <h2 className="text-sm font-bold text-[#0F172A]">
@@ -799,7 +808,7 @@ export default function EPMSDashboard() {
                           filteredPanels.map((panel) => (
                             <div
                               key={panel.id}
-                              className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_100px_90px_80px_repeat(4,32px)] gap-3 md:px-4 lg:px-6 p-3 md:py-3.5 border-b border-[#F1F5F9] md:last:border-0 hover:bg-[#F8FAFC] transition-colors items-center md:items-center"
+                              className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_100px_90px_80px_repeat(4,32px)] gap-3 md:px-4 lg:px-6 p-3 md:py-3.5 mb-2 md:mb-0 rounded-xl md:rounded-none bg-white border border-[#E5E7EB] md:border-0 md:border-b md:border-[#F1F5F9] shadow-[0_2px_8px_rgba(15,23,42,0.06)] md:shadow-none hover:bg-[#F8FAFC] transition-colors items-center md:items-center"
                             >
                               <div className="min-w-0 flex items-center gap-3">
                                 {panel.images?.frontImage ? (
