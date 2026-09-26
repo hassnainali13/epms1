@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 import type { Panel } from "../context/AppContext";
 import {
@@ -12,6 +12,7 @@ export interface PanelInstallNotification {
   id: string;
   panelName: string;
   createdAt: Date;
+  isRead: boolean;
 }
 
 export function useDashboardData() {
@@ -47,6 +48,7 @@ export function useDashboardData() {
             id: `${panelKey}-${Date.now()}`,
             panelName: panel.panelName || panel.name || panel.panelId || "Panel",
             createdAt: new Date(),
+            isRead: false,
           }];
         });
         if (transitions.length > 0) {
@@ -152,6 +154,14 @@ export function useDashboardData() {
   };
 
   const clearInstallNotifications = () => setInstallNotifications([]);
+  const markInstallNotificationsRead = useCallback((notificationIds: string[]) => {
+    const ids = new Set(notificationIds);
+    setInstallNotifications((current) =>
+      current.map((notification) =>
+        ids.has(notification.id) ? { ...notification, isRead: true } : notification,
+      ),
+    );
+  }, []);
 
   const removePanel = (panelId: string) => {
     setPanels((prev) =>
@@ -178,6 +188,7 @@ export function useDashboardData() {
     panels,
     installNotifications,
     clearInstallNotifications,
+    markInstallNotificationsRead,
     companyProfile,
     setCompanyProfile,
     companySaving,

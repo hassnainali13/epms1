@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Zap,
@@ -95,6 +95,7 @@ export default function EPMSDashboard() {
     panels,
     installNotifications,
     clearInstallNotifications,
+    markInstallNotificationsRead,
     companyProfile,
     setCompanyProfile,
     companySaving,
@@ -131,6 +132,8 @@ export default function EPMSDashboard() {
   }, []);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [openNotificationIds, setOpenNotificationIds] = useState<string[]>([]);
+  const notificationListRef = useRef<HTMLUListElement>(null);
   const [selectedMonthKey, setSelectedMonthKey] = useState(() => {
     const date = new Date();
     return `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
@@ -148,6 +151,28 @@ export default function EPMSDashboard() {
   const showPanelsTable = activeNav === "dashboard" || activeNav === "panels";
   const showDedicatedPageOnly =
     activeNav === "diagrams" || activeNav === "employees";
+
+  useEffect(() => {
+    if (!notificationsOpen || openNotificationIds.length === 0) return;
+    const list = notificationListRef.current;
+    if (!list) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const viewedIds = entries
+          .filter((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.75)
+          .map((entry) => entry.target.getAttribute("data-notification-id"))
+          .filter((id): id is string => Boolean(id));
+        if (viewedIds.length > 0) markInstallNotificationsRead(viewedIds);
+      },
+      { root: list, threshold: 0.75 },
+    );
+
+    list.querySelectorAll("[data-notification-id]").forEach((item) => {
+      observer.observe(item);
+    });
+    return () => observer.disconnect();
+  }, [notificationsOpen, openNotificationIds, markInstallNotificationsRead]);
 
   function triggerUpgrade(reason?: string) {
     setUpgradeReason(reason);
@@ -210,6 +235,12 @@ export default function EPMSDashboard() {
   const ready = panels.filter((p) => p.status === "Ready").length;
   const isPremium = currentUser.plan === "PREMIUM";
   const isFree = currentUser.plan === "FREE";
+  const unreadNotificationCount = installNotifications.filter(
+    (notification) => !notification.isRead,
+  ).length;
+  const openNotifications = installNotifications.filter((notification) =>
+    openNotificationIds.includes(notification.id),
+  );
   const panelLimitReached = isFree && panels.length >= 3;
   const logoUrl = companyProfile.logoUrl || currentUser.companyLogoUrl || "";
   const companyName =
@@ -409,15 +440,27 @@ export default function EPMSDashboard() {
             <div className="relative ml-1">
               <button
                 type="button"
-                aria-label={`Notifications${installNotifications.length ? `, ${installNotifications.length} new` : ""}`}
+                aria-label={`Notifications${unreadNotificationCount ? `, ${unreadNotificationCount} unread` : ""}`}
                 aria-expanded={notificationsOpen}
-                onClick={() => setNotificationsOpen((open) => !open)}
+                onClick={() => {
+                  if (notificationsOpen) {
+                    setNotificationsOpen(false);
+                    setOpenNotificationIds([]);
+                    return;
+                  }
+                  setOpenNotificationIds(
+                    installNotifications
+                      .filter((notification) => !notification.isRead)
+                      .map((notification) => notification.id),
+                  );
+                  setNotificationsOpen(true);
+                }}
                 className="relative p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
               >
                 <Bell size={18} />
-                {installNotifications.length > 0 && (
+                {unreadNotificationCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
-                    {installNotifications.length > 99 ? "99+" : installNotifications.length}
+                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
                   </span>
                 )}
               </button>
@@ -425,25 +468,35 @@ export default function EPMSDashboard() {
                 <div className="absolute right-0 top-full z-50 mt-2 w-[min(12rem,calc(100vw-5rem))] sm:w-80 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-lg">
                   <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
                     <h2 className="text-xs sm:text-sm font-semibold text-[#0F172A]">Notifications</h2>
-                    {installNotifications.length > 0 && (
+                    {openNotifications.length > 0 && (
                       <button
                         type="button"
-                        onClick={clearInstallNotifications}
+                        onClick={() => {
+                          clearInstallNotifications();
+                          setOpenNotificationIds([]);
+                        }}
                         className="text-[10px] sm:text-xs font-medium text-[#0E7490] hover:text-[#155E75]"
                       >
                         Clear
                       </button>
                     )}
                   </div>
-                  {installNotifications.length === 0 ? (
+                  {openNotifications.length === 0 ? (
                     <p className="px-3 py-5 text-center text-xs sm:px-4 sm:py-6 sm:text-sm text-[#64748B]">
-                      No notifications yet.
+                      You’re all caught up.
                     </p>
                   ) : (
-                    <ul className="max-h-72 overflow-y-auto divide-y divide-[#F1F5F9]">
-                      {installNotifications.map((notification) => (
-                        <li key={notification.id} className="px-4 py-3">
-                          <p className="text-[11px] sm:text-sm text-[#0F172A]">
+                    <ul
+                      ref={notificationListRef}
+                      className="max-h-64 overflow-y-auto divide-y divide-[#F1F5F9]"
+                    >
+                      {openNotifications.map((notification) => (
+                        <li
+                          key={notification.id}
+                          data-notification-id={notification.id}
+                          className="min-h-16 px-3 py-2 sm:px-4 sm:py-3"
+                        >
+                          <p className="line-clamp-2 text-[11px] sm:text-sm text-[#0F172A]">
                             <span className="font-semibold">{notification.panelName}</span>
                             {" is now installed."}
                           </p>
