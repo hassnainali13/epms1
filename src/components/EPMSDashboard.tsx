@@ -12,6 +12,7 @@ import {
   LogOut,
   Bell,
   Search,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Plus,
@@ -92,6 +93,8 @@ export default function EPMSDashboard() {
   const { currentUser, logout } = useApp();
   const {
     panels,
+    installNotifications,
+    clearInstallNotifications,
     companyProfile,
     setCompanyProfile,
     companySaving,
@@ -127,6 +130,11 @@ export default function EPMSDashboard() {
     return () => window.removeEventListener("resize", syncSidebarWithViewport);
   }, []);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState(() => {
+    const date = new Date();
+    return `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`;
+  });
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<string | undefined>();
   const [showSearch, setShowSearch] = useState(false);
@@ -150,6 +158,54 @@ export default function EPMSDashboard() {
   const handleCompanyLogoUpload = uploadLogo;
 
   if (!currentUser) return null;
+  const currentDate = new Date();
+  const currentMonthIndex = currentDate.getFullYear() * 12 + currentDate.getMonth();
+  const panelHistoryDates = panels.flatMap((panel) => {
+    if (
+      !panel.createdAt ||
+      (panel.status !== "Ready" && panel.status !== "Installed")
+    ) {
+      return [];
+    }
+    const createdDate = new Date(panel.createdAt);
+    return !Number.isNaN(createdDate.getTime()) && createdDate <= currentDate
+      ? [createdDate]
+      : [];
+  });
+  const earliestMonthIndex = panelHistoryDates.reduce(
+    (earliest, date) =>
+      Math.min(earliest, date.getFullYear() * 12 + date.getMonth()),
+    currentMonthIndex,
+  );
+  const historyMonths = Array.from(
+    { length: currentMonthIndex - earliestMonthIndex + 1 },
+    (_, index) => {
+      const monthIndex = currentMonthIndex - index;
+      const date = new Date(Math.floor(monthIndex / 12), monthIndex % 12, 1);
+      return {
+        key: `${date.getFullYear()}-${String(date.getMonth()).padStart(2, "0")}`,
+        label: date.toLocaleString(undefined, { month: "short", year: "numeric" }),
+      };
+    },
+  );
+  const [selectedYear, selectedMonthNumber] = selectedMonthKey
+    .split("-")
+    .map(Number);
+  const selectedMonth = new Date(selectedYear, selectedMonthNumber, 1);
+  const panelsInSelectedMonth = panels.filter((panel) => {
+    if (
+      !panel.createdAt ||
+      (panel.status !== "Ready" && panel.status !== "Installed")
+    ) {
+      return false;
+    }
+    const createdDate = new Date(panel.createdAt);
+    return (
+      !Number.isNaN(createdDate.getTime()) &&
+      createdDate.getFullYear() === selectedMonth.getFullYear() &&
+      createdDate.getMonth() === selectedMonth.getMonth()
+    );
+  }).length;
   const installed = panels.filter((p) => p.status === "Installed").length;
   const ready = panels.filter((p) => p.status === "Ready").length;
   const isPremium = currentUser.plan === "PREMIUM";
@@ -340,24 +396,70 @@ export default function EPMSDashboard() {
           <div className="flex items-center gap-1 ml-auto">
             {/* Plan badge */}
             <span
-              className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] sm:text-xs font-semibold ${
                 isPremium
-                  ? "bg-[#0EA5E9] text-white"
-                  : "bg-[#F1F5F9] text-[#64748B]"
+                  ? "border-sky-200 bg-sky-50 text-sky-700"
+                  : "border-slate-200 bg-slate-50 text-slate-600"
               }`}
             >
-              {isPremium ? (
-                <>
-                  <Crown size={10} /> PREMIUM
-                </>
-              ) : (
-                "FREE"
-              )}
+              <Crown size={13} className={isPremium ? "text-sky-600" : "text-slate-400"} />
+              {isPremium ? "Premium Plan" : "Free Plan"}
             </span>
 
-            <button className="relative p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors ml-1">
-              <Bell size={18} />
-            </button>
+            <div className="relative ml-1">
+              <button
+                type="button"
+                aria-label={`Notifications${installNotifications.length ? `, ${installNotifications.length} new` : ""}`}
+                aria-expanded={notificationsOpen}
+                onClick={() => setNotificationsOpen((open) => !open)}
+                className="relative p-2 rounded-lg text-[#64748B] hover:bg-[#F1F5F9] transition-colors"
+              >
+                <Bell size={18} />
+                {installNotifications.length > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                    {installNotifications.length > 99 ? "99+" : installNotifications.length}
+                  </span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-[min(12rem,calc(100vw-5rem))] sm:w-80 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-lg">
+                  <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+                    <h2 className="text-xs sm:text-sm font-semibold text-[#0F172A]">Notifications</h2>
+                    {installNotifications.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearInstallNotifications}
+                        className="text-[10px] sm:text-xs font-medium text-[#0E7490] hover:text-[#155E75]"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  {installNotifications.length === 0 ? (
+                    <p className="px-3 py-5 text-center text-xs sm:px-4 sm:py-6 sm:text-sm text-[#64748B]">
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    <ul className="max-h-72 overflow-y-auto divide-y divide-[#F1F5F9]">
+                      {installNotifications.map((notification) => (
+                        <li key={notification.id} className="px-4 py-3">
+                          <p className="text-[11px] sm:text-sm text-[#0F172A]">
+                            <span className="font-semibold">{notification.panelName}</span>
+                            {" is now installed."}
+                          </p>
+                          <time className="mt-1 block text-[10px] sm:text-xs text-[#64748B]">
+                            {notification.createdAt.toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -529,12 +631,12 @@ export default function EPMSDashboard() {
               <div>
                 {/* ── KPI Cards ── */}
                 {activeNav === "dashboard" && (
-                  <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
                     {/* Total Panels */}
-                    <div className="min-w-0 bg-white rounded-2xl border border-[#E5E7EB] p-1.5 sm:p-5 hover:shadow-md transition-shadow">
+                    <div className="min-w-0 min-h-[120px] sm:min-h-0 bg-white rounded-xl sm:rounded-2xl border border-[#E5E7EB] p-2.5 sm:p-5 hover:shadow-md transition-shadow">
                       <div className="flex items-center justify-between mb-2 sm:mb-3">
-                        <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0EA5E9] flex items-center justify-center">
-                          <Zap size={16} className="text-white" />
+                        <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#E0F2FE] flex items-center justify-center">
+                          <Zap size={13} className="text-[#0284C7]" />
                         </div>
                         {isFree && (
                           <span className="text-[10px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
@@ -542,13 +644,13 @@ export default function EPMSDashboard() {
                           </span>
                         )}
                       </div>
-                      <p className="text-lg sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+                      <p className="text-2xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
                         {panels.length}
                       </p>
-                      <p className="text-[10px] sm:text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
                         Total Panels
                       </p>
-                      <p className="text-[9px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
+                      <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
                         {isFree
                           ? `${3 - panels.length} slot${3 - panels.length !== 1 ? "s" : ""} remaining`
                           : "All time"}
@@ -556,70 +658,62 @@ export default function EPMSDashboard() {
                     </div>
 
                     {/* Installed */}
-                    <div className="min-w-0 bg-white rounded-2xl border border-[#E5E7EB] p-1.5 sm:p-5 hover:shadow-md transition-shadow">
-                      <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#22C55E] flex items-center justify-center mb-2 sm:mb-3">
-                        <CheckCircle2 size={16} className="text-white" />
+                    <div className="min-w-0 min-h-[120px] sm:min-h-0 bg-white rounded-xl sm:rounded-2xl border border-[#E5E7EB] p-2.5 sm:p-5 hover:shadow-md transition-shadow">
+                      <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#DCFCE7] flex items-center justify-center mb-2 sm:mb-3">
+                        <CheckCircle2 size={13} className="text-[#16A34A]" />
                       </div>
-                      <p className="text-lg sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+                      <p className="text-2xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
                         {installed}
                       </p>
-                      <p className="text-[10px] sm:text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
                         Installed Panels
                       </p>
-                      <p className="text-[9px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
+                      <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
                         Successfully deployed
                       </p>
                     </div>
 
                     {/* Ready */}
-                    <div className="min-w-0 bg-white rounded-2xl border border-[#E5E7EB] p-1.5 sm:p-5 hover:shadow-md transition-shadow">
-                      <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#F59E0B] flex items-center justify-center mb-2 sm:mb-3">
-                        <Clock size={16} className="text-white" />
+                    <div className="min-w-0 min-h-[120px] sm:min-h-0 bg-white rounded-xl sm:rounded-2xl border border-[#E5E7EB] p-2.5 sm:p-5 hover:shadow-md transition-shadow">
+                      <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#FEF3C7] flex items-center justify-center mb-2 sm:mb-3">
+                        <Clock size={13} className="text-[#D97706]" />
                       </div>
-                      <p className="text-lg sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+                      <p className="text-2xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
                         {ready}
                       </p>
-                      <p className="text-[10px] sm:text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
+                      <p className="text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
                         Ready Panels
                       </p>
-                      <p className="text-[9px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
+                      <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-0.5 leading-tight">
                         Ready for installation
                       </p>
                     </div>
 
-                    {/* Subscription */}
-                    <div
-                      className={`min-w-0 rounded-2xl border p-1.5 sm:p-5 hover:shadow-md transition-shadow cursor-pointer ${
-                        isPremium
-                          ? "bg-gradient-to-br from-[#0EA5E9] to-[#0284C7] border-[#0EA5E9]"
-                          : "bg-white border-[#E5E7EB]"
-                      }`}
-                      onClick={() => isFree && triggerUpgrade()}
-                    >
-                      <div
-                        className={`w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${isPremium ? "bg-white/20" : "bg-[#F1F5F9]"}`}
-                      >
-                        <Crown
-                          size={16}
-                          className={
-                            isPremium ? "text-white" : "text-[#64748B]"
-                          }
-                        />
+                    {/* Panels created this month */}
+                    <div className="min-w-0 min-h-[120px] sm:min-h-0 bg-white rounded-xl sm:rounded-2xl border border-[#E5E7EB] p-2.5 sm:p-5 hover:shadow-md transition-shadow">
+                      <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#CCFBF1] flex items-center justify-center mb-2 sm:mb-3">
+                        <CalendarDays size={13} className="text-[#0F766E]" />
                       </div>
-                      <p
-                        className={`text-lg sm:text-2xl font-bold tracking-tight truncate ${isPremium ? "text-white" : "text-[#0F172A]"}`}
-                      >
-                        {isPremium ? "PREMIUM" : "FREE"}
+                      <p className="text-2xl sm:text-2xl font-bold text-[#0F172A] tracking-tight">
+                        {panelsInSelectedMonth}
                       </p>
-                      <p
-                        className={`text-[10px] sm:text-xs font-medium mt-0.5 leading-tight ${isPremium ? "text-white/90" : "text-[#0F172A]"}`}
-                      >
-                        Subscription Status
-                      </p>
-                      <p
-                        className={`text-[9px] sm:text-[11px] mt-0.5 leading-tight ${isPremium ? "text-white/70" : "text-[#0EA5E9] font-medium"}`}
-                      >
-                        {isPremium ? "Unlimited access" : "Tap to upgrade →"}
+                      <label className="block text-xs font-medium text-[#0F172A] mt-0.5 leading-tight">
+                        Panels in
+                        <select
+                          aria-label="Select month for panel history"
+                          value={selectedMonthKey}
+                          onChange={(event) => setSelectedMonthKey(event.target.value)}
+                          className="mt-1 block w-full min-w-0 rounded-md border border-[#E5E7EB] bg-white px-1.5 py-1.5 text-[10px] sm:text-[11px] font-medium text-[#0E7490] focus:outline-none focus:ring-1 focus:ring-[#0E7490]"
+                        >
+                          {historyMonths.map((month) => (
+                            <option key={month.key} value={month.key}>
+                              {month.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="text-[10px] sm:text-[11px] text-[#64748B] mt-1 leading-tight">
+                        Ready + Installed
                       </p>
                     </div>
                   </div>
@@ -627,11 +721,11 @@ export default function EPMSDashboard() {
 
                 {/* ── Quick Actions ── */}
                 {showDashboardOverview && (
-                  <div className="bg-white rounded-2xl border border-[#E5E7EB] p-5">
-                    <h2 className="text-sm font-bold text-[#0F172A] mb-4">
+                  <div className="mt-3 sm:mt-4 bg-white rounded-xl sm:rounded-2xl border border-[#E5E7EB] p-3 sm:p-5">
+                    <h2 className="text-sm font-bold text-[#0F172A] mb-3 sm:mb-4">
                       Quick Actions
                     </h2>
-                    <div className="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+                    <div className="grid grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                       {/* Create Panel */}
                       <button
                         onClick={() => {
@@ -639,27 +733,27 @@ export default function EPMSDashboard() {
                           window.dispatchEvent(new PopStateEvent("popstate"));
                         }}
                         disabled={panelLimitReached}
-                        className={`min-w-0 flex flex-col items-center gap-1 sm:gap-2 py-2 sm:py-4 px-1 sm:px-3 rounded-xl border transition-all text-[10px] sm:text-sm font-medium text-center leading-tight ${
+                        className={`min-w-0 min-h-[76px] sm:min-h-[84px] flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-2 px-1 sm:py-4 sm:px-3 rounded-lg sm:rounded-xl border transition-all text-[10px] sm:text-sm font-medium text-center leading-tight ${
                           panelLimitReached
                             ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#CBD5E1] cursor-not-allowed"
                             : "border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] text-[#0F172A]"
                         }`}
                       >
                         <div
-                          className={`w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center ${panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#0EA5E9]"}`}
+                          className={`w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl flex items-center justify-center ${panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#E0F2FE]"}`}
                         >
                           <Plus
-                            size={17}
+                            size={13}
                             className={
                               panelLimitReached
                                 ? "text-[#CBD5E1]"
-                                : "text-white"
+                                : "text-[#0284C7]"
                             }
                           />
                         </div>
                         <span>Create Panel</span>
                         {panelLimitReached && (
-                          <span className="text-[10px] text-amber-500 font-medium">
+                          <span className="text-[9px] sm:text-[10px] text-amber-500 font-medium">
                             Limit reached
                           </span>
                         )}
@@ -669,21 +763,21 @@ export default function EPMSDashboard() {
                       <button
                         onClick={() => setShowDuplicatePicker(true)}
                         disabled={panels.length === 0 || panelLimitReached}
-                        className={`min-w-0 flex flex-col items-center gap-1 sm:gap-2 py-2 sm:py-4 px-1 sm:px-3 rounded-xl border transition-all text-[10px] sm:text-sm font-medium text-center leading-tight ${
+                        className={`min-w-0 min-h-[76px] sm:min-h-[84px] flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-2 px-1 sm:py-4 sm:px-3 rounded-lg sm:rounded-xl border transition-all text-[10px] sm:text-sm font-medium text-center leading-tight ${
                           panels.length === 0 || panelLimitReached
                             ? "border-[#E5E7EB] bg-[#F8FAFC] text-[#CBD5E1] cursor-not-allowed"
                             : "border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] text-[#0F172A]"
                         }`}
                       >
                         <div
-                          className={`w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center ${panels.length === 0 || panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#14B8A6]"}`}
+                          className={`w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl flex items-center justify-center ${panels.length === 0 || panelLimitReached ? "bg-[#F1F5F9]" : "bg-[#CCFBF1]"}`}
                         >
                           <FileText
-                            size={17}
-                            className={panels.length === 0 || panelLimitReached ? "text-[#CBD5E1]" : "text-white"}
+                            size={13}
+                            className={panels.length === 0 || panelLimitReached ? "text-[#CBD5E1]" : "text-[#0F766E]"}
                           />
                         </div>
-                        <span>Duplicate Panel Create</span>
+                        <span>Duplicate Panel</span>
                       </button>
 
                       {/* Generate QR */}
@@ -691,10 +785,10 @@ export default function EPMSDashboard() {
                         onClick={() => {
                           if (isFree && panels.length === 0) return;
                         }}
-                        className="min-w-0 flex flex-col items-center gap-1 sm:gap-2 py-2 sm:py-4 px-1 sm:px-3 rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-[10px] sm:text-sm font-medium text-center leading-tight text-[#0F172A]"
+                        className="min-w-0 min-h-[76px] sm:min-h-[84px] flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-2 px-1 sm:py-4 sm:px-3 rounded-lg sm:rounded-xl border border-[#E5E7EB] hover:border-[#0EA5E9] hover:bg-[#F0F9FF] transition-all text-[10px] sm:text-sm font-medium text-center leading-tight text-[#0F172A]"
                       >
-                        <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#22C55E] flex items-center justify-center">
-                          <QrCode size={17} className="text-white" />
+                        <div className="w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#DCFCE7] flex items-center justify-center">
+                          <QrCode size={13} className="text-[#16A34A]" />
                         </div>
                         <span>Generate QR</span>
                       </button>
@@ -729,7 +823,7 @@ export default function EPMSDashboard() {
 
                 {/* ── Recent Panels Table ── */}
                 {showPanelsTable && (
-                  <div className="bg-[#F8FAFC] md:bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
+                  <div className="mt-3 bg-[#F8FAFC] md:bg-white rounded-2xl border border-[#E5E7EB] overflow-hidden">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-[#E5E7EB]">
                       <div>
                         <h2 className="text-sm font-bold text-[#0F172A]">

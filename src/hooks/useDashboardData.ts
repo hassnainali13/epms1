@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
 import type { Panel } from "../context/AppContext";
 import {
@@ -8,9 +8,18 @@ import {
   uploadCompanyLogo,
 } from "../services/panelService";
 
+export interface PanelInstallNotification {
+  id: string;
+  panelName: string;
+  createdAt: Date;
+}
+
 export function useDashboardData() {
   const { currentUser } = useApp();
   const [panels, setPanels] = useState<Panel[]>([]);
+  const [installNotifications, setInstallNotifications] =
+    useState<PanelInstallNotification[]>([]);
+  const previousPanelStatuses = useRef<Map<string, Panel["status"]> | null>(null);
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
     logoUrl: "",
@@ -27,6 +36,29 @@ export function useDashboardData() {
     if (!currentUser) return;
     try {
       const nextPanels = await fetchPanels();
+      const previousStatuses = previousPanelStatuses.current;
+      if (previousStatuses) {
+        const transitions = nextPanels.flatMap((panel) => {
+          const panelKey = panel.id || panel.panelId || panel._id;
+          if (!panelKey || previousStatuses.get(panelKey) !== "Ready" || panel.status !== "Installed") {
+            return [];
+          }
+          return [{
+            id: `${panelKey}-${Date.now()}`,
+            panelName: panel.panelName || panel.name || panel.panelId || "Panel",
+            createdAt: new Date(),
+          }];
+        });
+        if (transitions.length > 0) {
+          setInstallNotifications((current) => [...transitions, ...current].slice(0, 20));
+        }
+      }
+      previousPanelStatuses.current = new Map(
+        nextPanels.flatMap((panel) => {
+          const panelKey = panel.id || panel.panelId || panel._id;
+          return panelKey ? [[panelKey, panel.status] as const] : [];
+        }),
+      );
       setPanels(nextPanels);
     } catch {
       setPanels([]);
@@ -55,6 +87,11 @@ export function useDashboardData() {
 
     void loadPanels();
     void loadCompany();
+    const pollPanels = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadPanels();
+    }, 20_000);
+
+    return () => window.clearInterval(pollPanels);
   }, [currentUser?.id]);
 
   const saveCompany = async (event: React.FormEvent) => {
@@ -114,6 +151,8 @@ export function useDashboardData() {
     await loadPanels();
   };
 
+  const clearInstallNotifications = () => setInstallNotifications([]);
+
   const removePanel = (panelId: string) => {
     setPanels((prev) =>
       prev.filter((panel) => panel._id !== panelId && panel.id !== panelId),
@@ -137,6 +176,8 @@ export function useDashboardData() {
 
   return {
     panels,
+    installNotifications,
+    clearInstallNotifications,
     companyProfile,
     setCompanyProfile,
     companySaving,
