@@ -1100,7 +1100,13 @@ function TimelineSection() {
   );
 }
 
-export default function PanelDetails({ panelId }: { panelId: string }) {
+export default function PanelDetails({
+  panelId,
+  publicAccessCode,
+}: {
+  panelId: string;
+  publicAccessCode?: string;
+}) {
   const { currentUser, startLoading, stopLoading } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1117,7 +1123,9 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
       try {
         setLoading(true);
         setError(null);
-        const endpoint = currentUser
+        const endpoint = publicAccessCode
+          ? `/panels/public/${encodeURIComponent(panelId)}/access/${encodeURIComponent(publicAccessCode)}`
+          : currentUser
           ? `/panels/lookup/${panelId}`
           : `/panels/public/${panelId}`;
         const res = await api.get(endpoint);
@@ -1142,9 +1150,14 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     return () => {
       mounted = false;
     };
-  }, [panelId, currentUser, startLoading, stopLoading]);
+  }, [panelId, publicAccessCode, currentUser, startLoading, stopLoading]);
 
   const handleBack = () => {
+    if (publicAccessCode) {
+      window.history.pushState({}, "", "/");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+      return;
+    }
     if (window.history.length > 1) {
       window.history.back();
     } else {
@@ -1248,7 +1261,11 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
     documents: (
       <DocumentsSection
         documents={documents}
-        onUpload={currentUser ? () => uploadRef.current?.click() : undefined}
+        onUpload={
+          currentUser && !publicAccessCode
+            ? () => uploadRef.current?.click()
+            : undefined
+        }
       />
     ),
     timeline: <TimelineSection />,
@@ -1285,7 +1302,7 @@ export default function PanelDetails({ panelId }: { panelId: string }) {
               size={15}
               className="group-hover:-translate-x-0.5 transition-transform"
             />
-            Back to Panels
+            {publicAccessCode ? "Back to Home" : "Back to Panels"}
           </button>
 
           <div className="bg-white rounded-2xl border border-[#E5E7EB] shadow-[0_1px_8px_rgba(0,0,0,0.04)] p-6">

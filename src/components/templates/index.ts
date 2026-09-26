@@ -7,8 +7,10 @@ import SpecificationTemplate02, {
 import SpecificationTemplate03, {
   createSpecificationTemplate03Pdf,
 } from "./SpecificationTemplate03";
+import type { TemplateId } from "./templateConfig";
 
-export type TemplateId = "template_01" | "template_02" | "template-03";
+export { DEFAULT_TEMPLATE_ID } from "./templateConfig";
+export type { TemplateId } from "./templateConfig";
 
 export interface TemplateInfo {
   id: TemplateId;
@@ -61,8 +63,6 @@ export const TEMPLATES: Record<TemplateId, TemplateInfo> = {
     pdfGenerator: createSpecificationTemplate03Pdf,
   },
 };
-
-export const DEFAULT_TEMPLATE_ID: TemplateId = "template_01";
 
 export const getTemplate = (
   templateId: TemplateId | string,

@@ -8,7 +8,7 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem("epms_token");
   const headers = { ...(config.headers as Record<string, string> | undefined) };
 
-  if (token) {
+  if (token && !headers.Authorization && !headers.authorization) {
     headers.Authorization = `Bearer ${token}`;
   }
 

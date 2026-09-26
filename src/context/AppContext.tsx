@@ -9,8 +9,10 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import api, { getAuthErrorMessage } from "../lib/api";
-import type { TemplateId } from "../components/templates";
-import { DEFAULT_TEMPLATE_ID } from "../components/templates";
+import {
+  DEFAULT_TEMPLATE_ID,
+  type TemplateId,
+} from "../components/templates/templateConfig";
 
 export type Plan = "FREE" | "PREMIUM";
 

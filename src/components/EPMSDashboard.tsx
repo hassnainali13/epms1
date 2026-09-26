@@ -173,10 +173,11 @@ export default function EPMSDashboard() {
 
   useEffect(() => {
     if (!notificationsOpen || notificationTab !== "new") return;
-    const frameId = window.requestAnimationFrame(
+    const readTimer = window.setTimeout(
       markVisibleNewNotificationsRead,
+      500,
     );
-    return () => window.cancelAnimationFrame(frameId);
+    return () => window.clearTimeout(readTimer);
   }, [markVisibleNewNotificationsRead, notificationTab, notificationsOpen]);
 
   function triggerUpgrade(reason?: string) {
@@ -496,12 +497,7 @@ export default function EPMSDashboard() {
                   ) : (
                     <ul
                       ref={notificationListRef}
-                      onWheel={() => {
-                        window.requestAnimationFrame(
-                          markVisibleNewNotificationsRead,
-                        );
-                      }}
-                      onTouchMove={() => {
+                      onScroll={() => {
                         window.requestAnimationFrame(
                           markVisibleNewNotificationsRead,
                         );

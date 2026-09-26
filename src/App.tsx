@@ -1,14 +1,19 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AppProvider, useApp } from "./context/AppContext";
-import LoginPage from "./components/LoginPage";
-import EPMSDashboard from "./components/EPMSDashboard";
-import AdminDashboard from "./components/AdminDashboard";
-import PanelQrPage from "./components/PanelQrPage";
-import PanelWizard from "./components/PanelWizard";
-import PanelCreatedSuccess from "./components/PanelCreatedSuccess";
-import PanelDetails from "./components/PanelDetails";
-import QRCodeTemplatesPage from "./components/QRCodeTemplatesPage";
 import AppLoader from "./components/AppLoader";
+
+const LoginPage = lazy(() => import("./components/LoginPage"));
+const EPMSDashboard = lazy(() => import("./components/EPMSDashboard"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
+const PanelQrPage = lazy(() => import("./components/PanelQrPage"));
+const PanelWizard = lazy(() => import("./components/PanelWizard"));
+const PanelCreatedSuccess = lazy(
+  () => import("./components/PanelCreatedSuccess"),
+);
+const PanelDetails = lazy(() => import("./components/PanelDetails"));
+const QRCodeTemplatesPage = lazy(
+  () => import("./components/QRCodeTemplatesPage"),
+);
 
 function AppRouter() {
   const { view, currentUser, isAuthReady, appLoading } = useApp();
@@ -36,6 +41,7 @@ function AppRouter() {
   }, []);
 
   const normalizedPath = path.replace(/\/+$/, "") || "/";
+  const publicPanelRoute = normalizedPath.match(/^\/(\d{12})\/([^/]+)$/);
 
   if (!isAuthReady) {
     return <AppLoader visible={true} />;
@@ -43,7 +49,14 @@ function AppRouter() {
 
   let content;
 
-  if (normalizedPath.startsWith("/panel/")) {
+  if (publicPanelRoute) {
+    content = (
+      <PanelDetails
+        panelId={decodeURIComponent(publicPanelRoute[2])}
+        publicAccessCode={publicPanelRoute[1]}
+      />
+    );
+  } else if (normalizedPath.startsWith("/panel/")) {
     const panelId = normalizedPath.replace("/panel/", "").replace(/\/$/, "");
     content = <PanelQrPage panelId={panelId} />;
   } else if (normalizedPath === "/qr-code-templates") {
@@ -94,7 +107,9 @@ function AppRouter() {
   return (
     <>
       <AppLoader visible={appLoading} />
-      {content}
+      <Suspense fallback={<AppLoader visible={true} />}>
+        {content}
+      </Suspense>
     </>
   );
 }

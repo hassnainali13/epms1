@@ -12,6 +12,9 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"view" | "install">("view");
   const [code, setCode] = useState("");
+  const [installationToken, setInstallationToken] = useState<string | null>(null);
+  const [installerVerified, setInstallerVerified] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installData, setInstallData] = useState({
     installer: "",
@@ -26,8 +29,12 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     !hasInstallationDetails && panel?.status !== "Installed",
   );
 
-  const openPanelDetails = () => {
-    window.history.pushState({}, "", `/panels/${encodeURIComponent(panelId)}`);
+  const openPanelDetails = (publicAccessCode: string) => {
+    window.history.pushState(
+      {},
+      "",
+      `/${encodeURIComponent(publicAccessCode)}/${encodeURIComponent(panelId)}`,
+    );
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
@@ -46,7 +53,11 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
         const res = await api.get(`/panels/public/${panelId}`);
         const nextPanel = res.data.panel as Panel;
         if (nextPanel.status === "Installed") {
-          openPanelDetails();
+          if (res.data.publicAccessCode) {
+            openPanelDetails(res.data.publicAccessCode);
+          } else {
+            setError("Secure panel details link is not available.");
+          }
           return;
         }
         setPanel(nextPanel);
@@ -83,22 +94,49 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     }
   }, [mode, installData.installationDate]);
 
+  const handleVerifyInstallerCode = async () => {
+    try {
+      setError(null);
+      setVerifyingCode(true);
+      const response = await api.post(
+        `/panels/public/${encodeURIComponent(panelId)}/verify-installer`,
+        { code },
+      );
+      setPanel(response.data.panel as Panel);
+      setInstallationToken(response.data.token as string);
+      setInstallerVerified(true);
+      setCode("");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to verify installer code.",
+      );
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
   const handleInstallSubmit = async () => {
-    if (!panel) return;
+    if (!panel || !installationToken) return;
     try {
       setError(null);
       const response = await api.put(
         `/panels/complete-installation/${panelId}`,
         {
-          code,
           installer: installData.installer,
           installationDate: installData.installationDate,
           installationLocation: installData.installationLocation,
         },
+        {
+          headers: { Authorization: `Bearer ${installationToken}` },
+        },
       );
       setPanel(response.data.panel);
       if (response.data.panel.status === "Installed") {
-        openPanelDetails();
+        if (response.data.publicAccessCode) {
+          openPanelDetails(response.data.publicAccessCode);
+        } else {
+          setError("Secure panel details link is not available.");
+        }
       } else {
         setMode("view");
       }
@@ -122,6 +160,59 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
       <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl p-10 shadow-xl text-center">
           <p className="text-sm text-[#64748B]">Panel not found.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!installerVerified && panel.status !== "Installed") {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] p-4 sm:p-6 flex items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-lg sm:p-8">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#E0F2FE] text-[#0284C7]">
+              <Lock size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-[#64748B]">Panel {panel.panelId}</p>
+              <h1 className="text-lg font-bold text-[#0F172A]">
+                Installer verification
+              </h1>
+            </div>
+          </div>
+          <p className="mb-4 text-sm text-[#64748B]">
+            Enter your company installer access code to view panel details and continue installation.
+          </p>
+          <label className="mb-2 block text-xs font-semibold text-[#0F172A]">
+            Installer access code
+          </label>
+          <input
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !verifyingCode && code.trim()) {
+                void handleVerifyInstallerCode();
+              }
+            }}
+            type="password"
+            autoComplete="one-time-code"
+            placeholder="Enter access code"
+            className="mb-3 w-full rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-sm text-[#0F172A] focus:border-[#0EA5E9] focus:outline-none focus:ring-2 focus:ring-[#0EA5E9]/20"
+          />
+          {error && (
+            <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {error}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={!code.trim() || verifyingCode}
+            onClick={() => void handleVerifyInstallerCode()}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0EA5E9] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0284C7] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Lock size={15} />
+            {verifyingCode ? "Verifying..." : "Verify and continue"}
+          </button>
         </div>
       </div>
     );
@@ -210,19 +301,6 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
             </>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-[#E5E7EB] p-5 bg-[#F8FAFC]">
-                <p className="text-xs text-[#64748B] mb-2">
-                  Enter installer code
-                </p>
-                <input
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  type="password"
-                  placeholder="Installer access code"
-                  className="w-full px-3 py-2.5 text-sm border border-[#E5E7EB] rounded-xl bg-white text-[#0F172A]"
-                />
-              </div>
-
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold text-[#0F172A]">
