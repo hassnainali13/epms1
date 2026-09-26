@@ -2,12 +2,17 @@ import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, Lock, QrCode } from "lucide-react";
 import api from "../lib/api";
 import type { Panel } from "../context/AppContext";
+import PanelDetails from "./PanelDetails";
 
 interface PanelQrPageProps {
   panelId: string;
+  publicAccessCode?: string;
 }
 
-export default function PanelQrPage({ panelId }: PanelQrPageProps) {
+export default function PanelQrPage({
+  panelId,
+  publicAccessCode,
+}: PanelQrPageProps) {
   const [panel, setPanel] = useState<Panel | null>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<"view" | "install">("view");
@@ -15,6 +20,7 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
   const [installationToken, setInstallationToken] = useState<string | null>(null);
   const [installerVerified, setInstallerVerified] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
+  const [requiresUniqueUrl, setRequiresUniqueUrl] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [installData, setInstallData] = useState({
     installer: "",
@@ -30,12 +36,9 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
   );
 
   const openPanelDetails = (publicAccessCode: string) => {
-    window.history.pushState(
-      {},
-      "",
+    window.location.replace(
       `/${encodeURIComponent(publicAccessCode)}/${encodeURIComponent(panelId)}`,
     );
-    window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   const companyDisplayName = panel
@@ -50,9 +53,17 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
     const getPanel = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/panels/public/${panelId}`);
+        const endpoint = publicAccessCode
+          ? `/panels/public/${encodeURIComponent(panelId)}/access/${encodeURIComponent(publicAccessCode)}`
+          : `/panels/public/${encodeURIComponent(panelId)}`;
+        const res = await api.get(endpoint);
         const nextPanel = res.data.panel as Panel;
-        if (nextPanel.status === "Installed") {
+        if (res.data.requiresUniqueUrl) {
+          setRequiresUniqueUrl(true);
+          setPanel(nextPanel);
+          return;
+        }
+        if (nextPanel.status === "Installed" && !publicAccessCode) {
           if (res.data.publicAccessCode) {
             openPanelDetails(res.data.publicAccessCode);
           } else {
@@ -100,7 +111,10 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
       setVerifyingCode(true);
       const response = await api.post(
         `/panels/public/${encodeURIComponent(panelId)}/verify-installer`,
-        { code },
+        {
+          code,
+          ...(publicAccessCode ? { publicAccessCode } : {}),
+        },
       );
       setPanel(response.data.panel as Panel);
       setInstallationToken(response.data.token as string);
@@ -131,7 +145,7 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
         },
       );
       setPanel(response.data.panel);
-      if (response.data.panel.status === "Installed") {
+      if (response.data.panel.status === "Installed" && !publicAccessCode) {
         if (response.data.publicAccessCode) {
           openPanelDetails(response.data.publicAccessCode);
         } else {
@@ -163,6 +177,23 @@ export default function PanelQrPage({ panelId }: PanelQrPageProps) {
         </div>
       </div>
     );
+  }
+
+  if (requiresUniqueUrl) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] p-6 flex items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-[#E5E7EB] bg-white p-6 text-center shadow-lg sm:p-8">
+          <h1 className="text-lg font-bold text-[#0F172A]">Use the panel QR code</h1>
+          <p className="mt-2 text-sm text-[#64748B]">
+            This new panel uses a secure unique URL. Open it from the QR code attached to the panel.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (publicAccessCode && panel.status === "Installed") {
+    return <PanelDetails panelId={panelId} publicAccessCode={publicAccessCode} />;
   }
 
   if (!installerVerified && panel.status !== "Installed") {

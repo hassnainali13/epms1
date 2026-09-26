@@ -51,7 +51,7 @@ function AppRouter() {
 
   if (publicPanelRoute) {
     content = (
-      <PanelDetails
+      <PanelQrPage
         panelId={decodeURIComponent(publicPanelRoute[2])}
         publicAccessCode={publicPanelRoute[1]}
       />
