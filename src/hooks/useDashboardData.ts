@@ -18,8 +18,40 @@ export interface PanelInstallNotification {
 export function useDashboardData() {
   const { currentUser } = useApp();
   const [panels, setPanels] = useState<Panel[]>([]);
-  const [installNotifications, setInstallNotifications] =
-    useState<PanelInstallNotification[]>([]);
+  const notificationStorageKey = currentUser?.id
+    ? `epms_install_notifications_${currentUser.id}`
+    : null;
+  const [installNotifications, setInstallNotifications] = useState<
+    PanelInstallNotification[]
+  >(() => {
+    if (typeof window === "undefined" || !currentUser?.id) return [];
+    try {
+      const stored = JSON.parse(
+        window.localStorage.getItem(
+          `epms_install_notifications_${currentUser.id}`,
+        ) || "[]",
+      );
+      if (!Array.isArray(stored)) return [];
+      return stored.flatMap((item) => {
+        const createdAt = new Date(item.createdAt);
+        if (
+          typeof item.id !== "string" ||
+          typeof item.panelName !== "string" ||
+          Number.isNaN(createdAt.getTime())
+        ) {
+          return [];
+        }
+        return [{
+          id: item.id,
+          panelName: item.panelName,
+          createdAt,
+          isRead: item.isRead === true,
+        }];
+      });
+    } catch {
+      return [];
+    }
+  });
   const previousPanelStatuses = useRef<Map<string, Panel["status"]> | null>(null);
   const [companyProfile, setCompanyProfile] = useState({
     name: "",
@@ -52,7 +84,7 @@ export function useDashboardData() {
           }];
         });
         if (transitions.length > 0) {
-          setInstallNotifications((current) => [...transitions, ...current].slice(0, 20));
+          setInstallNotifications((current) => [...transitions, ...current]);
         }
       }
       previousPanelStatuses.current = new Map(
@@ -95,6 +127,18 @@ export function useDashboardData() {
 
     return () => window.clearInterval(pollPanels);
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!notificationStorageKey) return;
+    try {
+      window.localStorage.setItem(
+        notificationStorageKey,
+        JSON.stringify(installNotifications),
+      );
+    } catch (error) {
+      console.warn("Unable to persist panel notifications.", error);
+    }
+  }, [installNotifications, notificationStorageKey]);
 
   const saveCompany = async (event: React.FormEvent) => {
     event.preventDefault();

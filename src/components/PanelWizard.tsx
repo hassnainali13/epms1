@@ -2477,13 +2477,18 @@ export default function CreatePanelWizard({
           panelType: panel.panelType || panel.type || "",
           customerCompany: panel.customer || "",
           projectName: panel.projectName || "",
-          installationLocation: panel.installationLocation || "",
+          installationLocation: isDuplicateMode
+            ? ""
+            : panel.installationLocation || "",
           manufacturerName: panel.manufacturer || "",
-          installerName: panel.installer || "",
-          installationDate: panel.installationDate || "",
-          panelStatus: ["Ready", "Installed"].includes(panel.status)
-            ? panel.status
-            : "Ready",
+          installerName: isDuplicateMode ? "" : panel.installer || "",
+          installationDate: isDuplicateMode
+            ? ""
+            : panel.installationDate || "",
+          panelStatus:
+            isDuplicateMode || !["Ready", "Installed"].includes(panel.status)
+              ? "Ready"
+              : panel.status,
           description: panel.description || "",
           manufacturingDate: isDuplicateMode
             ? new Date().toISOString().split("T")[0]
