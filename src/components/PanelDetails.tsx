@@ -42,6 +42,7 @@ import {
   PlugZap,
   SlidersHorizontal,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 import api from "../lib/api";
 import { useApp } from "../context/AppContext";
 import type { Panel } from "../context/AppContext";
@@ -667,6 +668,7 @@ function MotorsSection({ panel }: { panel?: PanelRecord }) {
 
 function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
   const [showModels, setShowModels] = useState(true);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const qtyRows = Object.entries(
     panel?.technicalSpecs?.instrumentQuantities || {},
   ).map(([category, qty]) => ({
@@ -679,6 +681,129 @@ function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
   // This avoids additional lookups or normalization and reuses the
   // saved data shape (company::model strings or objects).
   const modelGroups = groupSavedInstrumentModels(panel?.instrumentModels || {});
+  const modelCategories = new Set(modelGroups.map((group) => group.category));
+  const instrumentRows = [
+    ...modelGroups.flatMap((group) =>
+      group.items.map((item) => ({
+        description: [
+          group.category,
+          item.company === "Unknown company" ? "" : item.company,
+          item.model === "Unknown model" ? "" : item.model,
+        ]
+          .filter(Boolean)
+          .join(" - "),
+        quantity: item.count,
+      })),
+    ),
+    ...qtyRows
+      .filter((row) => !modelCategories.has(row.category))
+      .map((row) => ({
+        description: row.category,
+        quantity: row.qty,
+      })),
+  ].filter((row) => row.quantity > 0);
+
+  const downloadInstrumentList = () => {
+    setPdfError(null);
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const tableWidth = pageWidth - margin * 2;
+      const numberWidth = 18;
+      const quantityWidth = 34;
+      const descriptionX = margin + numberWidth;
+      const quantityX = pageWidth - margin - quantityWidth;
+      const descriptionWidth = quantityX - descriptionX - 4;
+
+      const drawPageHeader = () => {
+        pdf.setFillColor("#203F8A");
+        pdf.roundedRect(margin, 12, tableWidth, 24, 2, 2, "F");
+        pdf.setTextColor("#FFFFFF");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(17);
+        pdf.text("Electrical Material List", margin + 6, 23);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.text("Specification & Procurement Sheet", margin + 6, 30);
+
+        pdf.setTextColor("#203F8A");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(11);
+        pdf.text("Electrical Material List", margin, 46);
+        pdf.setDrawColor("#203F8A");
+        pdf.setLineWidth(0.6);
+        pdf.line(margin, 49, pageWidth - margin, 49);
+
+        pdf.setTextColor("#475569");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.text("Supplier: ______________________________", margin, 56);
+        pdf.setFont("helvetica", "normal");
+        const panelName = panel?.panelName || panel?.name || "—";
+        const panelId = panel?.panelId || panel?.id || "—";
+        pdf.text(`Panel: ${panelName}   Panel ID: ${panelId}`, margin, 63);
+
+        pdf.setFillColor("#EEF2F7");
+        pdf.rect(margin, 69, tableWidth, 9, "F");
+        pdf.setTextColor("#1F2937");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.text("S. No.", margin + numberWidth / 2, 75, { align: "center" });
+        pdf.text("Item Description", descriptionX + 2, 75);
+        pdf.text("Quantity", pageWidth - margin - 2, 75, { align: "right" });
+        return 78;
+      };
+
+      let y = drawPageHeader();
+      const rows = instrumentRows.length
+        ? instrumentRows
+        : [{ description: "No instruments recorded", quantity: 0 }];
+
+      rows.forEach((row, index) => {
+        const lines = pdf.splitTextToSize(row.description, descriptionWidth - 4);
+        const rowHeight = Math.max(9, lines.length * 4.5 + 4);
+        if (y + rowHeight > pageHeight - margin) {
+          pdf.addPage();
+          y = drawPageHeader();
+        }
+
+        if (index % 2 === 1) {
+          pdf.setFillColor("#F5F7FA");
+          pdf.rect(margin, y, tableWidth, rowHeight, "F");
+        }
+        pdf.setDrawColor("#D7DEE8");
+        pdf.setLineWidth(0.25);
+        pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+        pdf.setTextColor("#334155");
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text(String(index + 1), margin + numberWidth / 2, y + 5.8, {
+          align: "center",
+        });
+        pdf.text(lines, descriptionX + 2, y + 5.8);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(
+          row.quantity > 0
+            ? `${row.quantity} Pc${row.quantity === 1 ? "" : "s"}`
+            : "—",
+          pageWidth - margin - 2,
+          y + 5.8,
+          { align: "right" },
+        );
+        y += rowHeight;
+      });
+
+      const safePanelId = (panel?.panelId || panel?.id || "panel")
+        .replace(/[^a-z0-9-_]/gi, "-")
+        .replace(/-+/g, "-");
+      pdf.save(`${safePanelId}-instrument-list.pdf`);
+    } catch (error) {
+      console.error("Instrument list PDF export failed", error);
+      setPdfError("Unable to create the instrument list PDF.");
+    }
+  };
 
   const iconMap: Record<string, ElementType> = {
     PLC: Cpu,
@@ -692,6 +817,24 @@ function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
 
   return (
     <div className="space-y-5">
+      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+        <p className="text-xs text-[#64748B]">
+          Download the panel instruments as a procurement sheet.
+        </p>
+        <button
+          type="button"
+          onClick={downloadInstrumentList}
+          className="inline-flex items-center gap-2 rounded-lg bg-[#203F8A] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#19336F]"
+        >
+          <Download size={14} />
+          Download All Instruments PDF
+        </button>
+      </div>
+      {pdfError && (
+        <p role="alert" className="text-xs text-red-600">
+          {pdfError}
+        </p>
+      )}
       <SectionCard>
         <SectionHeader
           icon={Gauge}

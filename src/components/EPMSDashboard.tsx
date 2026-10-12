@@ -107,6 +107,7 @@ export default function EPMSDashboard() {
     removePanel,
   } = useDashboardData();
   const [activeNav, setActiveNav] = useState("dashboard");
+  const [visiblePanelCount, setVisiblePanelCount] = useState(10);
   const [selectedDeletePanel, setSelectedDeletePanel] = useState<{
     id: string;
     name: string;
@@ -148,6 +149,10 @@ export default function EPMSDashboard() {
   } | null>(null);
   const showDashboardOverview = activeNav === "dashboard";
   const showPanelsTable = activeNav === "dashboard" || activeNav === "panels";
+  const visiblePanels =
+    activeNav === "dashboard"
+      ? filteredPanels.slice(0, 5)
+      : filteredPanels.slice(0, visiblePanelCount);
   const showDedicatedPageOnly =
     activeNav === "diagrams" || activeNav === "employees";
 
@@ -307,6 +312,7 @@ export default function EPMSDashboard() {
                         return;
                       }
                       setActiveNav(id);
+                      if (id === "panels") setVisiblePanelCount(10);
                       if (window.innerWidth < 768) setSidebarOpen(false);
                     }}
                     className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-1 md:px-3 py-2 md:py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
@@ -966,7 +972,7 @@ export default function EPMSDashboard() {
                             No panels match your filter.
                           </p>
                         ) : (
-                          filteredPanels.map((panel) => (
+                          visiblePanels.map((panel) => (
                             <div
                               key={panel.id}
                               className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_100px_90px_80px_repeat(4,32px)] gap-3 md:px-4 lg:px-6 p-3 md:py-3.5 mb-2 md:mb-0 rounded-xl md:rounded-none bg-white border border-[#E5E7EB] md:border-0 md:border-b md:border-[#F1F5F9] shadow-[0_2px_8px_rgba(15,23,42,0.06)] md:shadow-none hover:bg-[#F8FAFC] transition-colors items-center md:items-center"
@@ -1109,6 +1115,49 @@ export default function EPMSDashboard() {
                             </div>
                           ))
                         )}
+
+                        {(activeNav === "dashboard" && filteredPanels.length > 5) ||
+                        (activeNav === "panels" &&
+                          filteredPanels.length > 10) ? (
+                          <div className="flex items-center justify-center gap-3 border-t border-[#F1F5F9] px-4 py-3">
+                            {activeNav === "dashboard" ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPanelSearch("");
+                                  setVisiblePanelCount(10);
+                                  setActiveNav("panels");
+                                }}
+                                className="text-xs font-semibold text-[#0369A1] hover:text-[#075985] transition-colors"
+                              >
+                                Show more
+                              </button>
+                            ) : (
+                              <>
+                                {visiblePanelCount < filteredPanels.length && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setVisiblePanelCount((count) => count + 10)
+                                    }
+                                    className="text-xs font-semibold text-[#0369A1] hover:text-[#075985] transition-colors"
+                                  >
+                                    Show more
+                                  </button>
+                                )}
+                                {visiblePanelCount > 10 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setVisiblePanelCount(10)}
+                                    className="text-xs font-semibold text-[#64748B] hover:text-[#334155] transition-colors"
+                                  >
+                                    Show less
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        ) : null}
 
                         {/* Free plan add-more CTA */}
                         {showDeleteDialog && selectedDeletePanel && (
