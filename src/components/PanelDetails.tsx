@@ -739,7 +739,11 @@ function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
         pdf.setTextColor("#475569");
         pdf.setFont("helvetica", "bold");
         pdf.setFontSize(8.5);
-        pdf.text("Supplier: ______________________________", margin, 56);
+        pdf.text(
+          `Panel Size: ${panel?.technicalSpecs?.dimensions || "—"}`,
+          margin,
+          56,
+        );
         pdf.setFont("helvetica", "normal");
         const panelName = panel?.panelName || panel?.name || "—";
         const panelId = panel?.panelId || panel?.id || "—";
