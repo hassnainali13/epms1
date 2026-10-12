@@ -78,7 +78,7 @@ function AppRouter() {
   } else if (normalizedPath.startsWith("/panels/")) {
     const panelId = normalizedPath.replace("/panels/", "").replace(/\/$/, "");
     if (panelId && panelId !== "create" && panelId !== "success") {
-      content = <PanelDetails panelId={panelId} />;
+      content = <PanelDetails panelId={panelId} showInstrumentPdf />;
     }
   } else if (
     (normalizedPath === "/instrument-master" ||

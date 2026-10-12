@@ -666,7 +666,13 @@ function MotorsSection({ panel }: { panel?: PanelRecord }) {
   );
 }
 
-function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
+function InstrumentsSection({
+  panel,
+  showPdfDownload,
+}: {
+  panel?: PanelRecord;
+  showPdfDownload: boolean;
+}) {
   const [showModels, setShowModels] = useState(true);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const qtyRows = Object.entries(
@@ -821,23 +827,27 @@ function InstrumentsSection({ panel }: { panel?: PanelRecord }) {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-        <p className="text-xs text-[#64748B]">
-          Download the panel instruments as a procurement sheet.
-        </p>
-        <button
-          type="button"
-          onClick={downloadInstrumentList}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#203F8A] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#19336F]"
-        >
-          <Download size={14} />
-          Download All Instruments PDF
-        </button>
-      </div>
-      {pdfError && (
-        <p role="alert" className="text-xs text-red-600">
-          {pdfError}
-        </p>
+      {showPdfDownload && (
+        <>
+          <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
+            <p className="text-xs text-[#64748B]">
+              Download the panel instruments as a procurement sheet.
+            </p>
+            <button
+              type="button"
+              onClick={downloadInstrumentList}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#203F8A] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#19336F]"
+            >
+              <Download size={14} />
+              Download All Instruments PDF
+            </button>
+          </div>
+          {pdfError && (
+            <p role="alert" className="text-xs text-red-600">
+              {pdfError}
+            </p>
+          )}
+        </>
       )}
       <SectionCard>
         <SectionHeader
@@ -1250,9 +1260,11 @@ function TimelineSection() {
 export default function PanelDetails({
   panelId,
   publicAccessCode,
+  showInstrumentPdf = false,
 }: {
   panelId: string;
   publicAccessCode?: string;
+  showInstrumentPdf?: boolean;
 }) {
   const { currentUser, startLoading, stopLoading } = useApp();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -1397,7 +1409,12 @@ export default function PanelDetails({
     ),
     electrical: <ElectricalSection panel={panel || undefined} />,
     motors: <MotorsSection panel={panel || undefined} />,
-    instruments: <InstrumentsSection panel={panel || undefined} />,
+    instruments: (
+      <InstrumentsSection
+        panel={panel || undefined}
+        showPdfDownload={showInstrumentPdf && !publicAccessCode}
+      />
+    ),
     protection: <ProtectionSection panel={panel || undefined} />,
     images: (
       <ImagesSection
