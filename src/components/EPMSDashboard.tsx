@@ -1039,7 +1039,7 @@ export default function EPMSDashboard() {
                         <span>Generate QR</span>
                       </button>
 
-                      {/* Order Bucket */}
+                      {/* Multi-Panel Instrument Export */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1057,7 +1057,7 @@ export default function EPMSDashboard() {
                             </span>
                           )}
                         </div>
-                        <span>Order Bucket</span>
+                        <span>Multi-Panel Instrument Export</span>
                       </button>
 
                     </div>
@@ -1121,21 +1121,29 @@ export default function EPMSDashboard() {
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-xs font-semibold text-[#0F172A]">
-                              Order bucket · {selectedPanels.length} panel
+                              Combined Instrument List · {selectedPanels.length} panel
                               {selectedPanels.length === 1 ? "" : "s"} selected
                             </p>
                             <p className="mt-0.5 text-[11px] text-[#64748B]">
-                              Select panels to combine their instrument quantities.
+                              Select panels to combine matching category and model quantities.
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveNav("dashboard")}
+                              className="inline-flex items-center gap-1 rounded-lg border border-[#D7DEE8] bg-white px-3 py-2 text-xs font-semibold text-[#475569] hover:bg-[#F1F5F9]"
+                            >
+                              <ChevronLeft size={14} />
+                              Back to Dashboard
+                            </button>
                             {selectedPanels.length > 0 && (
                               <button
                                 type="button"
                                 onClick={() => setSelectedPanelIds([])}
                                 className="rounded-lg border border-[#D7DEE8] bg-white px-3 py-2 text-xs font-semibold text-[#475569] hover:bg-[#F1F5F9]"
                               >
-                                Clear bucket
+                                Clear selection
                               </button>
                             )}
                             <button
@@ -1145,7 +1153,7 @@ export default function EPMSDashboard() {
                               className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#203F8A] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#19336F] disabled:cursor-not-allowed disabled:opacity-45"
                             >
                               <Download size={14} />
-                              Download order PDF
+                              Export Combined PDF
                             </button>
                           </div>
                         </div>
@@ -1159,7 +1167,7 @@ export default function EPMSDashboard() {
                                   type="button"
                                   onClick={() => togglePanelSelection(panelId)}
                                   className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#CBD5E1] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#334155] hover:border-[#94A3B8]"
-                                  title="Remove panel from order bucket"
+                                  title="Remove panel from combined list"
                                 >
                                   <span className="max-w-[220px] truncate">
                                     {panel.panelName || panel.name || panel.panelId || "Panel"}
@@ -1232,7 +1240,7 @@ export default function EPMSDashboard() {
                                 {activeNav === "panels" && (
                                   <input
                                     type="checkbox"
-                                    aria-label={`Add ${panel.panelName || panel.name || "panel"} to order bucket`}
+                                    aria-label={`Add ${panel.panelName || panel.name || "panel"} to combined instrument list`}
                                     checked={selectedPanelIds.includes(
                                       getPanelSelectionId(panel),
                                     )}
