@@ -20,6 +20,7 @@ import {
   Trash2,
   Edit3,
   ArrowUpRight,
+  ShoppingCart,
   ChevronLeft,
   ChevronRight,
   MapPin,
@@ -28,9 +29,13 @@ import {
   Crown,
   AlertTriangle,
   Upload,
+  Download,
   X,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import type { Panel } from "../context/AppContext";
+import { jsPDF } from "jspdf";
+import { groupSavedInstrumentModels } from "../lib/reviewInstrumentMapping";
 import PanelQRCode from "./PanelQRCode";
 import UpgradeModal from "./UpgradeModal";
 import InstallerCodeSettings from "./InstallerCodeSettings";
@@ -108,6 +113,7 @@ export default function EPMSDashboard() {
   } = useDashboardData();
   const [activeNav, setActiveNav] = useState("dashboard");
   const [visiblePanelCount, setVisiblePanelCount] = useState(10);
+  const [selectedPanelIds, setSelectedPanelIds] = useState<string[]>([]);
   const [selectedDeletePanel, setSelectedDeletePanel] = useState<{
     id: string;
     name: string;
@@ -155,6 +161,173 @@ export default function EPMSDashboard() {
       : filteredPanels.slice(0, visiblePanelCount);
   const showDedicatedPageOnly =
     activeNav === "diagrams" || activeNav === "employees";
+  const getPanelSelectionId = (panel: Panel) =>
+    panel.id || panel.panelId || panel._id || "";
+  const selectedPanels = panels.filter((panel) =>
+    selectedPanelIds.includes(getPanelSelectionId(panel)),
+  );
+
+  const togglePanelSelection = (panelId: string) => {
+    if (!panelId) return;
+    setSelectedPanelIds((current) =>
+      current.includes(panelId)
+        ? current.filter((id) => id !== panelId)
+        : [...current, panelId],
+    );
+  };
+
+  const downloadSelectedInstrumentList = () => {
+    const totals = new Map<
+      string,
+      { category: string; description: string; quantity: number }
+    >();
+
+    selectedPanels.forEach((panel) => {
+      const groups = groupSavedInstrumentModels(panel.instrumentModels || {});
+      const modelCategories = new Set(groups.map((group) => group.category));
+
+      groups.forEach((group) => {
+        group.items.forEach((item) => {
+          const model =
+            item.model === "Unknown model" ? "Unspecified model" : item.model;
+          const key = `${group.category}\u0000${model}`;
+          const existing = totals.get(key);
+          totals.set(key, {
+            category: group.category,
+            description: model,
+            quantity: (existing?.quantity || 0) + item.count,
+          });
+        });
+      });
+
+      Object.entries(panel.technicalSpecs?.instrumentQuantities || {}).forEach(
+        ([category, rawQuantity]) => {
+          const quantity = Number(rawQuantity) || 0;
+          if (modelCategories.has(category) || quantity <= 0) return;
+          const key = `${category}\u0000${category}`;
+          const existing = totals.get(key);
+          totals.set(key, {
+            category,
+            description: category,
+            quantity: (existing?.quantity || 0) + quantity,
+          });
+        },
+      );
+    });
+
+    const rows = Array.from(totals.values()).sort(
+      (first, second) =>
+        first.category.localeCompare(second.category) ||
+        first.description.localeCompare(second.description, undefined, {
+          numeric: true,
+          sensitivity: "base",
+        }),
+    );
+
+    try {
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const tableWidth = pageWidth - margin * 2;
+      const numberWidth = 18;
+      const quantityWidth = 32;
+      const descriptionX = margin + numberWidth;
+      const descriptionWidth = tableWidth - numberWidth - quantityWidth - 8;
+
+      const drawHeader = (firstPage: boolean) => {
+        pdf.setFillColor("#203F8A");
+        pdf.roundedRect(margin, 12, tableWidth, 23, 2, 2, "F");
+        pdf.setTextColor("#FFFFFF");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(16);
+        pdf.text("Electrical Material List", margin + 6, 23);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text("Selected Panels · Combined Instrument Summary", margin + 6, 30);
+
+        let y = 44;
+        if (firstPage) {
+          pdf.setTextColor("#475569");
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(8.5);
+          pdf.text(`Panels included: ${selectedPanels.length}`, margin, y);
+          y += 5;
+          pdf.setFont("helvetica", "normal");
+          const panelNames = selectedPanels.map(
+            (panel) =>
+              `${panel.panelName || panel.name || "Panel"} (${panel.panelId || panel.id || panel._id || "—"})`,
+          );
+          const panelLines = pdf.splitTextToSize(
+            panelNames.join(" · "),
+            tableWidth,
+          );
+          pdf.text(panelLines, margin, y);
+          y += panelLines.length * 4 + 3;
+        }
+
+        pdf.setFillColor("#EEF2F7");
+        pdf.rect(margin, y, tableWidth, 9, "F");
+        pdf.setTextColor("#1F2937");
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.text("S. No.", margin + numberWidth / 2, y + 6, {
+          align: "center",
+        });
+        pdf.text("Item Description", descriptionX + 2, y + 6);
+        pdf.text("Quantity", pageWidth - margin - 2, y + 6, {
+          align: "right",
+        });
+        return y + 9;
+      };
+
+      let y = drawHeader(true);
+      const listRows = rows.length
+        ? rows
+        : [{ category: "", description: "No instruments recorded", quantity: 0 }];
+
+      listRows.forEach((row, index) => {
+        const itemDescription = row.category
+          ? `${row.category} - ${row.description}`
+          : row.description;
+        const lines = pdf.splitTextToSize(itemDescription, descriptionWidth);
+        const rowHeight = Math.max(9, lines.length * 4.5 + 4);
+        if (y + rowHeight > pageHeight - margin) {
+          pdf.addPage();
+          y = drawHeader(false);
+        }
+
+        if (index % 2 === 1) {
+          pdf.setFillColor("#F5F7FA");
+          pdf.rect(margin, y, tableWidth, rowHeight, "F");
+        }
+        pdf.setDrawColor("#D7DEE8");
+        pdf.setLineWidth(0.25);
+        pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+        pdf.setTextColor("#334155");
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8.5);
+        pdf.text(String(index + 1), margin + numberWidth / 2, y + 5.8, {
+          align: "center",
+        });
+        pdf.text(lines, descriptionX + 2, y + 5.8);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(
+          row.quantity > 0
+            ? `${row.quantity} Pc${row.quantity === 1 ? "" : "s"}`
+            : "—",
+          pageWidth - margin - 2,
+          y + 5.8,
+          { align: "right" },
+        );
+        y += rowHeight;
+      });
+
+      pdf.save("selected-panels-instrument-list.pdf");
+    } catch (error) {
+      console.error("Selected panels instrument PDF export failed", error);
+    }
+  };
 
   const markVisibleNewNotificationsRead = useCallback(() => {
     if (!notificationsOpen || notificationTab !== "new") return;
@@ -866,6 +1039,27 @@ export default function EPMSDashboard() {
                         <span>Generate QR</span>
                       </button>
 
+                      {/* Order Bucket */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPanelSearch("");
+                          setVisiblePanelCount(10);
+                          setActiveNav("panels");
+                        }}
+                        className="min-w-0 min-h-[76px] sm:min-h-[84px] flex flex-col items-center justify-center gap-1.5 sm:gap-2 py-2 px-1 sm:py-4 sm:px-3 rounded-lg sm:rounded-xl border border-[#E5E7EB] hover:border-[#0F766E] hover:bg-[#F0FDFA] transition-all text-[10px] sm:text-sm font-medium text-center leading-tight text-[#0F172A]"
+                      >
+                        <div className="relative w-6 h-6 sm:w-9 sm:h-9 rounded-md sm:rounded-xl bg-[#CCFBF1] flex items-center justify-center">
+                          <ShoppingCart size={13} className="text-[#0F766E]" />
+                          {selectedPanels.length > 0 && (
+                            <span className="absolute -right-1.5 -top-1.5 min-w-4 h-4 rounded-full bg-[#0F766E] px-1 text-[9px] font-bold leading-4 text-white">
+                              {selectedPanels.length}
+                            </span>
+                          )}
+                        </div>
+                        <span>Order Bucket</span>
+                      </button>
+
                     </div>
 
                     {/* Premium feature hints for free users */}
@@ -921,6 +1115,63 @@ export default function EPMSDashboard() {
                         />
                       </div>
                     </div>
+
+                    {activeNav === "panels" && (
+                      <div className="border-b border-[#E5E7EB] bg-[#F8FAFC] px-4 py-3 sm:px-6">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-xs font-semibold text-[#0F172A]">
+                              Order bucket · {selectedPanels.length} panel
+                              {selectedPanels.length === 1 ? "" : "s"} selected
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-[#64748B]">
+                              Select panels to combine their instrument quantities.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {selectedPanels.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPanelIds([])}
+                                className="rounded-lg border border-[#D7DEE8] bg-white px-3 py-2 text-xs font-semibold text-[#475569] hover:bg-[#F1F5F9]"
+                              >
+                                Clear bucket
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              disabled={selectedPanels.length === 0}
+                              onClick={downloadSelectedInstrumentList}
+                              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#203F8A] px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-[#19336F] disabled:cursor-not-allowed disabled:opacity-45"
+                            >
+                              <Download size={14} />
+                              Download order PDF
+                            </button>
+                          </div>
+                        </div>
+                        {selectedPanels.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {selectedPanels.map((panel) => {
+                              const panelId = getPanelSelectionId(panel);
+                              return (
+                                <button
+                                  key={panelId}
+                                  type="button"
+                                  onClick={() => togglePanelSelection(panelId)}
+                                  className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-[#CBD5E1] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#334155] hover:border-[#94A3B8]"
+                                  title="Remove panel from order bucket"
+                                >
+                                  <span className="max-w-[220px] truncate">
+                                    {panel.panelName || panel.name || panel.panelId || "Panel"}
+                                  </span>
+                                  <X size={12} />
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {panels.length === 0 ? (
                       <div className="text-center py-16 px-6">
@@ -978,6 +1229,22 @@ export default function EPMSDashboard() {
                               className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_100px_90px_80px_repeat(4,32px)] gap-3 md:px-4 lg:px-6 p-3 md:py-3.5 mb-2 md:mb-0 rounded-xl md:rounded-none bg-white border border-[#E5E7EB] md:border-0 md:border-b md:border-[#F1F5F9] shadow-[0_2px_8px_rgba(15,23,42,0.06)] md:shadow-none hover:bg-[#F8FAFC] transition-colors items-center md:items-center"
                             >
                               <div className="min-w-0 flex items-center gap-3">
+                                {activeNav === "panels" && (
+                                  <input
+                                    type="checkbox"
+                                    aria-label={`Add ${panel.panelName || panel.name || "panel"} to order bucket`}
+                                    checked={selectedPanelIds.includes(
+                                      getPanelSelectionId(panel),
+                                    )}
+                                    disabled={!getPanelSelectionId(panel)}
+                                    onChange={() =>
+                                      togglePanelSelection(
+                                        getPanelSelectionId(panel),
+                                      )
+                                    }
+                                    className="h-4 w-4 flex-shrink-0 accent-[#203F8A]"
+                                  />
+                                )}
                                 {panel.images?.frontImage ? (
                                   <button
                                     type="button"
